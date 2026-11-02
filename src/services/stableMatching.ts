@@ -153,7 +153,7 @@ export function buildBarterMarket(state: AppState, extraOffers: Listing[] = []):
   const proposers: BarterProposer[] = listings.map((l) => ({
     id: l.id,
     label: l.title,
-    ownerName: owner(l.companyId),
+    ownerName: extraOffers.includes(l) ? "Your offer" : owner(l.companyId),
     itemType: l.materialId,
     quantity: l.quantityKg,
     baseYieldValue: Math.round(l.quantityKg * (ratio.get(l.id) ?? 0)),
