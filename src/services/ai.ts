@@ -1,33 +1,38 @@
 import type { Category, Material } from "./types";
 import { CATEGORY_LABELS, MATERIALS, findMaterial } from "./catalog";
-import { integrations } from "./integrations";
 
-// AI integration layer. Without a configured endpoint, nothing pretends to be AI:
-// the classifier reports "not connected" and the assistant answers from the material catalogue.
+// AI integration layer. Calls the app's own server routes (Azure OpenAI). When those are not
+// configured, nothing pretends to be AI: the classifier says so and the assistant uses the catalogue.
 
 export type ClassifierResult =
   | { status: "unavailable"; message: string }
   | { status: "ok"; materialId: string; confidence: number; notes: string[] }
+  | { status: "no_match"; notes: string[] }
   | { status: "error"; message: string };
 
-/** Sends the image to the configured classifier endpoint, if any. Expected JSON: { materialId, confidence, notes }. */
+export const CLASSIFIER_ENDPOINT = "/api/ai/classify";
+export const ASSISTANT_ENDPOINT = "/api/ai/assistant";
+
+/** Sends the image to the server classifier (Azure OpenAI vision). Never fabricates a result. */
 export async function classifyMaterialImage(imageDataUrl: string): Promise<ClassifierResult> {
-  const endpoint = integrations.ai.classifierEndpoint;
-  if (!endpoint) {
-    return { status: "unavailable", message: "No AI classification service is connected. Choose the material yourself to see catalogue guidance." };
+  let response: Response;
+  try {
+    response = await fetch(CLASSIFIER_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: imageDataUrl }) });
+  } catch {
+    return { status: "unavailable", message: "The AI classification service could not be reached. Choose the material yourself to see catalogue guidance." };
+  }
+  if (response.status === 503) {
+    return { status: "unavailable", message: "No AI classification service is configured. Choose the material yourself to see catalogue guidance." };
   }
   try {
-    const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: imageDataUrl }) });
-    if (!response.ok) return { status: "error", message: `Classifier responded with ${response.status}.` };
-    const data: unknown = await response.json();
-    const r = data as { materialId?: unknown; confidence?: unknown; notes?: unknown };
-    if (typeof r.materialId !== "string" || !findMaterial(r.materialId) || typeof r.confidence !== "number") {
-      return { status: "error", message: "Classifier returned an unrecognised result." };
-    }
-    const notes = Array.isArray(r.notes) ? r.notes.filter((n): n is string => typeof n === "string").slice(0, 5) : [];
-    return { status: "ok", materialId: r.materialId, confidence: Math.max(0, Math.min(1, r.confidence)), notes };
+    const data = (await response.json()) as { materialId?: unknown; confidence?: unknown; notes?: unknown; error?: unknown };
+    if (!response.ok) return { status: "error", message: typeof data.error === "string" && response.status === 400 ? data.error : "The classifier is temporarily unavailable." };
+    const notes = Array.isArray(data.notes) ? data.notes.filter((n): n is string => typeof n === "string").slice(0, 5) : [];
+    if (typeof data.materialId !== "string" || !findMaterial(data.materialId)) return { status: "no_match", notes };
+    const confidence = typeof data.confidence === "number" ? Math.max(0, Math.min(1, data.confidence)) : 0.5;
+    return { status: "ok", materialId: data.materialId, confidence, notes };
   } catch {
-    return { status: "error", message: "Could not reach the classifier service." };
+    return { status: "error", message: "Classifier returned an unrecognised result." };
   }
 }
 
@@ -95,14 +100,14 @@ export function answerFromCatalogue(question: string): AssistantReply {
   return { text: `${parts.join(" ")} Browse the marketplace or publish a requirement to get matched.`, materialIds: unique, source: "catalogue" };
 }
 
-/** Uses the assistant endpoint when configured (expects { answer }), otherwise the catalogue. */
-export async function askAssistant(question: string): Promise<AssistantReply> {
-  const endpoint = integrations.ai.assistantEndpoint;
-  if (!endpoint) return answerFromCatalogue(question);
+/** Asks the server assistant (Azure OpenAI); falls back to catalogue answers if it is unavailable. */
+export async function askAssistant(question: string, context = ""): Promise<AssistantReply> {
   try {
-    const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+    const response = await fetch(ASSISTANT_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, context }) });
     const data = (await response.json()) as { answer?: unknown };
-    if (response.ok && typeof data.answer === "string") return { text: data.answer, materialIds: [], source: "service" };
+    if (response.ok && typeof data.answer === "string") {
+      return { text: data.answer, materialIds: answerFromCatalogue(question).materialIds, source: "service" };
+    }
   } catch {
     /* fall back below */
   }

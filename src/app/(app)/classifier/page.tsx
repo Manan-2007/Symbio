@@ -12,7 +12,7 @@ import { CATEGORIES } from "@/services/types";
 import { CATEGORY_LABELS, MATERIALS, findMaterial } from "@/services/catalog";
 import { classifyMaterialImage, materialGuidance } from "@/services/ai";
 import type { ClassifierResult } from "@/services/ai";
-import { integrations } from "@/services/integrations";
+import { useIntegrationStatus } from "@/hooks/use-integration-status";
 import { resizeImage } from "@/utils/image";
 import { cx } from "@/utils/format";
 
@@ -24,7 +24,8 @@ export default function ClassifierPage() {
   const [result, setResult] = useState<ClassifierResult | null>(null);
   const [materialId, setMaterialId] = useState("");
   const [dragging, setDragging] = useState(false);
-  const connected = Boolean(integrations.ai.classifierEndpoint);
+  const status = useIntegrationStatus();
+  const connected = status?.azureOpenAI.configured ?? false;
   const material = findMaterial(materialId);
   const guidance = material ? materialGuidance(material) : null;
 
@@ -53,7 +54,7 @@ export default function ClassifierPage() {
         eyebrow="AI waste classifier"
         title="What is this material, and who could use it?"
         description="Upload a photo for classification, then get reuse routes, buyer industries and quality checks from the SYMBIO material catalogue."
-        actions={<Badge tone={connected ? "green" : "gold"} icon={<PlugZap className="size-3" />}>{connected ? "Classifier connected" : "AI service not connected"}</Badge>}
+        actions={<Badge tone={connected ? "green" : "gold"} icon={<PlugZap className="size-3" />}>{status === null ? "Checking AI service…" : connected ? "Azure OpenAI vision connected" : "AI service not connected"}</Badge>}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
@@ -84,14 +85,16 @@ export default function ClassifierPage() {
           <Button className="mt-4 w-full" disabled={!image || busy} onClick={analyse} icon={busy ? <Loader2 className="size-4 animate-spin" /> : <ScanSearch className="size-4" />}>
             {busy ? "Analysing…" : "Analyse photo"}
           </Button>
-          {result?.status === "unavailable" && <Notice className="mt-4">{result.message} Set <code>NEXT_PUBLIC_AI_CLASSIFIER_ENDPOINT</code> to connect a service.</Notice>}
+          {result?.status === "unavailable" && <Notice className="mt-4">{result.message} Set <code>AZURE_OPENAI_API_KEY</code> and <code>AZURE_OPENAI_ENDPOINT</code> on the server to enable it.</Notice>}
+          {result?.status === "no_match" && <Notice className="mt-4">The model couldn&apos;t match this photo to a catalogue material. {result.notes.join(" ")} Choose the material yourself below.</Notice>}
           {result?.status === "error" && <Notice tone="red" className="mt-4">{result.message}</Notice>}
           {result?.status === "ok" && (
             <Notice tone="green" className="mt-4">
-              Classifier suggests <strong>{findMaterial(result.materialId)?.name}</strong> ({Math.round(result.confidence * 100)}% confidence). Confirm below before relying on it.
+              AI suggests <strong>{findMaterial(result.materialId)?.name}</strong> ({Math.round(result.confidence * 100)}% confidence). Confirm below before relying on it.
+              {result.notes.length > 0 && <ul className="mt-2 list-disc pl-4">{result.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
             </Notice>
           )}
-          <p className="mt-4 text-[12px] text-muted">Photos stay in your browser unless a classifier service is configured.</p>
+          <p className="mt-4 text-[12px] text-muted">When you click Analyse, a resized copy of the photo is sent to Azure OpenAI through SYMBIO&apos;s server. AI output can be wrong; always confirm.</p>
         </Card>
 
         <Card className="p-6">

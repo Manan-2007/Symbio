@@ -6,15 +6,18 @@ import type { FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Loader2, Send, Sparkles, X } from "lucide-react";
 import { ASSISTANT_SUGGESTIONS, askAssistant } from "@/services/ai";
-import { integrations } from "@/services/integrations";
+import { useIntegrationStatus } from "@/hooks/use-integration-status";
+import { useApp } from "@/components/app-provider";
+import { cityName, materialName } from "@/services/catalog";
 import { findMaterial } from "@/services/catalog";
 import { cx } from "@/utils/format";
 
-type Turn = { id: number; role: "user" | "assistant"; text: string; materialIds?: string[] };
-
-const CONNECTED = Boolean(integrations.ai.assistantEndpoint);
+type Turn = { id: number; role: "user" | "assistant"; text: string; materialIds?: string[]; source?: "catalogue" | "service" };
 
 export function SymbioAssistant() {
+  const { state } = useApp();
+  const status = useIntegrationStatus();
+  const connected = status?.azureOpenAI.configured ?? false;
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
@@ -40,8 +43,14 @@ export function SymbioAssistant() {
     setTurns((t) => [...t, { id: nextId.current++, role: "user", text: q }]);
     setDraft("");
     setBusy(true);
-    const reply = await askAssistant(q);
-    setTurns((t) => [...t, { id: nextId.current++, role: "assistant", text: reply.text, materialIds: reply.materialIds }]);
+    // Compact, fictional marketplace snapshot so answers can point at real demo listings.
+    const name = (id: string) => state.companies.find((c) => c.id === id)?.name ?? "company";
+    const context = [
+      ...state.listings.filter((l) => l.status === "active").slice(0, 25).map((l) => `Listing: ${materialName(l.materialId)}, ${l.quantityKg} kg, ₹${l.pricePerKg}/kg, ${cityName(l.cityId)}, by ${name(l.companyId)}`),
+      ...state.requirements.filter((r) => r.status === "open").slice(0, 15).map((r) => `Open buyer requirement (see Smart matches): ${materialName(r.materialId)}, ${r.quantityKg} kg, budget ₹${r.maxBudgetPerKg}/kg, near ${cityName(r.cityId)}, by ${name(r.companyId)}`),
+    ].join("\n");
+    const reply = await askAssistant(q, context);
+    setTurns((t) => [...t, { id: nextId.current++, role: "assistant", text: reply.text, materialIds: reply.materialIds, source: reply.source }]);
     setBusy(false);
   }
 
@@ -66,7 +75,7 @@ export function SymbioAssistant() {
               <div className="grid size-9 place-items-center rounded-full bg-white/10"><Sparkles className="size-[18px] text-sage" /></div>
               <div className="flex-1">
                 <h2 className="font-display text-xl leading-none">Symbio Assistant</h2>
-                <p className="mt-1 text-[11.5px] text-sage/90">{CONNECTED ? "Connected to assistant service" : "Catalogue guide · offline demo, not an AI model"}</p>
+                <p className="mt-1 text-[11.5px] text-sage/90">{connected ? "Powered by Azure OpenAI · can make mistakes" : "Catalogue guide · AI service not connected"}</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="focus-ring rounded-full p-1.5 hover:bg-white/10" aria-label="Close assistant"><X className="size-5" /></button>
             </header>
@@ -86,7 +95,8 @@ export function SymbioAssistant() {
               {turns.map((t) => (
                 <div key={t.id} className={cx("flex", t.role === "user" ? "justify-end" : "justify-start")}>
                   <div className={cx("max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-relaxed", t.role === "user" ? "rounded-br-md bg-forest text-white" : "rounded-bl-md border border-line bg-white text-ink")}>
-                    {t.text}
+                    <span className="whitespace-pre-line">{t.text}</span>
+                    {t.role === "assistant" && t.source === "catalogue" && connected && <span className="mt-1 block text-[11px] text-muted">AI unavailable, answered from the catalogue.</span>}
                     {t.materialIds && t.materialIds.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {t.materialIds.map((id) => (
