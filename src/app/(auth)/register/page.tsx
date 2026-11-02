@@ -26,18 +26,18 @@ export default function RegisterPage() {
   const [role, setRole] = useState<(typeof ROLE_OPTIONS)[number]["value"]>("generator");
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     if (data.get("password") !== data.get("confirm")) return setError("Passwords don't match.");
     const roles: Role[] = role === "both" ? ["generator", "consumer"] : [role];
-    const r = register({
+    const r = await register({
       companyName: data.get("companyName"), email: data.get("email"), password: data.get("password"), industry: data.get("industry"),
       cityId: data.get("cityId"), phone: data.get("phone"), roles,
     });
     if (!r.ok) return setError(r.error);
-    toast("success", "Company account created", "Now complete your profile.");
-    router.push("/onboarding");
+    toast("success", r.value.session ? "Company account created" : "Check your email", r.value.session ? "Now complete your profile." : "Confirm your email address, then sign in.");
+    router.push(r.value.session ? "/onboarding" : "/login");
   }
 
   return (
@@ -61,7 +61,7 @@ export default function RegisterPage() {
         <TextField name="phone" type="tel" label="Contact number" autoComplete="tel" placeholder="+91 98765 43210" required />
         <ChoiceGroup label="Account role" name="role" value={role} options={ROLE_OPTIONS} onChange={setRole} />
         {error && <p role="alert" className="text-[13px] font-medium text-error">{error}</p>}
-        <Notice>Demo mode: your password is checked for length only and is never stored. The account lives in this browser.</Notice>
+        <Notice>Your account is secured by Supabase. Confirm your email to activate your company workspace.</Notice>
         <Button type="submit" className="w-full" size="lg" disabled={!isHydrated} iconRight={<ArrowRight className="size-4" />}>Create account</Button>
       </form>
       <p className="mt-6 text-center text-[14px] text-muted">Already registered? <Link href="/login" className="font-semibold text-forest hover:underline">Sign in</Link></p>

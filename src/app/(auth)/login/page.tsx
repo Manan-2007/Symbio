@@ -19,16 +19,16 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
     if (!isEmail(email)) return setError("Enter a valid business email.");
     if (!password) return setError("Enter your password.");
-    const r = loginWithEmail(email);
+    const r = await loginWithEmail(email, password);
     if (!r.ok) return setError(r.error);
-    toast("success", "Welcome back", "Signed in to your demo account.");
+    toast("success", "Welcome back", "Signed in to your shared company account.");
     router.push("/dashboard");
   }
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
     <div>
       <h1 className="font-display text-[42px] leading-none font-medium text-forest-950">Welcome back</h1>
       <p className="mt-3 text-[15px] text-muted">Sign in to manage listings, matches and exchanges.</p>
-      <Notice className="mt-6">Demo mode: passwords are not stored or verified. Any password works for an existing demo or registered email.</Notice>
+      <Notice className="mt-6">Sign in with your Supabase account. The demo companies below use separate browser-local data.</Notice>
       <form onSubmit={submit} noValidate className="mt-6 space-y-4">
         <TextField name="email" type="email" label="Business email" autoComplete="email" placeholder="you@company.com" onChange={() => setError(null)} />
         <TextField name="password" type="password" label="Password" autoComplete="current-password" onChange={() => setError(null)} />
@@ -56,7 +56,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 disabled={!isHydrated}
-                onClick={() => { const r = loginAsCompany(c.id); if (r.ok) { toast("success", `Signed in as ${c.name}`, "Demo account, no password needed."); router.push("/dashboard"); } }}
+                onClick={async () => { const r = await loginAsCompany(c.id); if (r.ok) { toast("success", `Signed in as ${c.name}`, "Demo account, no password needed."); router.push("/dashboard"); } }}
                 className="focus-ring flex w-full items-center gap-3 rounded-2xl border border-line bg-white p-3 text-left transition-colors hover:border-forest disabled:opacity-50"
               >
                 <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sage-50 font-display text-lg font-semibold text-forest">{c.name.charAt(0)}</span>

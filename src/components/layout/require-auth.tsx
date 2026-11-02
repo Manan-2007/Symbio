@@ -33,7 +33,7 @@ export function RequireAuth({ children, title = "Sign in to continue" }: { child
       <p className="mt-8 text-[12px] font-bold tracking-[0.14em] text-muted uppercase">Or continue as a demo company</p>
       <div className="mt-3 flex flex-wrap justify-center gap-2">
         {QUICK.filter((q) => state.companies.some((c) => c.id === q.id)).map((q) => (
-          <Button key={q.id} size="sm" variant="secondary" onClick={() => { const r = loginAsCompany(q.id); if (r.ok) { toast("success", `Signed in as ${q.label.split(" (")[0]}`, "Demo account, no password needed."); router.refresh(); } }}>
+          <Button key={q.id} size="sm" variant="secondary" onClick={async () => { const r = await loginAsCompany(q.id); if (r.ok) { toast("success", `Signed in as ${q.label.split(" (")[0]}`, "Demo account, no password needed."); router.refresh(); } }}>
             {q.label}
           </Button>
         ))}
