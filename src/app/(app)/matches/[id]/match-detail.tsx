@@ -10,7 +10,7 @@ import { Badge, Card, EmptyState, LoadingBlock, Notice } from "@/components/ui/p
 import { FactorBar, MaterialArt, ScoreRing } from "@/components/ui/visuals";
 import { MapView } from "@/components/map-view";
 import { RequestModal } from "@/components/request-modal";
-import { CONTAMINATION_LABELS, QUALITY_LABELS, cityName, findMaterial, materialName } from "@/services/catalog";
+import { CONTAMINATION_LABELS, QUALITY_LABELS, cityName, findCity, findMaterial, materialName } from "@/services/catalog";
 import { evaluate, isMatch, parseMatchId, WEIGHTS } from "@/services/matchingEngine";
 import { estimateCo2eKg } from "@/services/carbonCalculator";
 import { OPEN_STATUSES } from "@/services/actions";
@@ -24,10 +24,13 @@ export function MatchDetail() {
   const listing = parsed && state.listings.find((l) => l.id === parsed.listingId);
   const requirement = parsed && state.requirements.find((r) => r.id === parsed.requirementId);
   const result = useMemo(() => (listing && requirement ? evaluate(listing, requirement) : null), [listing, requirement]);
-  const markers = useMemo(() => (listing && requirement ? [
-    { id: "s", cityId: listing.cityId, label: "Supplier", tone: "generator" as const },
-    { id: "b", cityId: requirement.cityId, label: "Buyer", tone: "consumer" as const },
-  ] : []), [listing, requirement]);
+  const from = listing ? findCity(listing.cityId) : undefined;
+  const to = requirement ? findCity(requirement.cityId) : undefined;
+  const markers = useMemo(() => (from && to ? [
+    { id: "s", lat: from.lat, lng: from.lng, label: "Supplier", tone: "generator" as const },
+    { id: "b", lat: to.lat, lng: to.lng, label: "Buyer", tone: "consumer" as const },
+  ] : []), [from, to]);
+  const route = useMemo(() => (from && to ? { from, to } : null), [from, to]);
 
   if (!isHydrated) return <LoadingBlock />;
   if (!listing || !requirement || !result) {
@@ -108,7 +111,7 @@ export function MatchDetail() {
           </ul>
         </Card>
         <div className="space-y-6">
-          <MapView markers={markers} route={{ fromCityId: listing.cityId, toCityId: requirement.cityId }} />
+          <MapView markers={markers} route={route} />
           <Card className="p-6">
             <h2 className="font-display text-[22px] text-forest-950">Potential impact</h2>
             <p className="mt-2 text-[14px] text-muted">Reusing {fmtKg(m.usableKg)} would avoid an estimated <strong className="text-forest">{fmtCo2e(estimateCo2eKg(material.id, m.usableKg))}</strong> (illustrative {material.co2eFactor} kgCO₂e/kg). Counted only once the exchange completes.</p>
