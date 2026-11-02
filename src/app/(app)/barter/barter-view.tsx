@@ -24,6 +24,7 @@ const EXAMPLES: (BarterInput & { label: string })[] = [
   { label: "Sawdust → mushroom substrate", industryA: "Furniture workshop", byproduct: "Untreated hardwood sawdust", industryB: "Mushroom farm", finalProduct: "Oyster mushroom substrate blocks", quantityKg: 800 },
   { label: "Cotton scraps → insulation", industryA: "Garment manufacturer", byproduct: "Pre-consumer cotton cutting scraps", industryB: "Insulation maker", finalProduct: "Thermal insulation batts", quantityKg: 450 },
   { label: "PET flakes → food trays", industryA: "Plastic recycler", byproduct: "Washed clear PET flakes", industryB: "Packaging manufacturer", finalProduct: "Thermoformed food trays", quantityKg: 650 },
+  { label: "Steel turnings → castings", industryA: "CNC machining shop", byproduct: "Oily mild steel turnings", industryB: "Foundry", finalProduct: "Grey iron castings", quantityKg: 900 },
   { label: "Coffee grounds → compost", industryA: "Café chain", byproduct: "Spent coffee grounds", industryB: "Compost producer", finalProduct: "Organic compost", quantityKg: 1200 },
 ];
 
@@ -82,7 +83,7 @@ function StableMatches({ market, offerMaterial }: { market: BarterMarket; offerM
                 {market.pairs.map((p) => (
                   <tr key={p.proposer.id} className={p.proposer.id === OFFER_ID ? "bg-sage-50" : undefined}>
                     <td className="py-2.5 pr-3">
-                      <p className="font-semibold">{p.proposer.ownerName}{p.proposer.id === OFFER_ID && <Badge tone="sage" className="ml-2">Your offer</Badge>}</p>
+                      <p className="font-semibold">{p.proposer.id === OFFER_ID ? <Badge tone="sage">Your offer</Badge> : p.proposer.ownerName}</p>
                       <p className="text-[12px] text-muted">{describeOffer(p.proposer)}</p>
                     </td>
                     <td className="py-2.5 pr-3">
