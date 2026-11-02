@@ -39,7 +39,7 @@ A furniture workshop has sawdust it needs to clear. A mushroom farm needs growin
 
 ## Four standout features
 
-### 01 · Explainable, two-way industrial matching
+### 01 · Explainable, two-way industrial matching and checks two-way alignment
 
 SYMBIO ranks both **supply for a buyer’s requirements** and **buyers for a supplier’s listing**. Each result includes a score, a factor breakdown, plain-language reasons and cautions.
 
