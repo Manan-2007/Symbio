@@ -1,6 +1,39 @@
-# Symbio architecture (three-hour prototype)
+# SYMBIO architecture
 
-Source of truth for scope: [`plan.md`](../plan.md). This file describes how the code is wired.
+## Platform (current app)
+
+Next.js 16 App Router, TypeScript strict, Tailwind 4, Framer Motion, Recharts, Lucide. The brief asked for React + Vite + JS; the existing, tested Next.js + TS codebase was kept instead (App Router replaces React Router).
+
+```text
+src/app/(marketing)/      /, /about, /contact             Navbar + Footer + Assistant
+src/app/(auth)/           /login, /register, /forgot-password
+src/app/(app)/            AppShell (sidebar) + Assistant
+  dashboard  marketplace  marketplace/[id]  listings/new  requirements  matches  matches/[id]
+  negotiations  map  impact  transactions  companies/[id]  classifier  onboarding
+src/app/prototype/        original 3-hour prototype (unchanged logic, own storage key)
+
+src/components/app-provider.tsx   single source of truth: hydration, persistence, actions
+src/components/ui/                Button, Card/Badge/Notice/EmptyState, fields, Modal/ConfirmDialog, Toast, visuals
+src/components/layout/            Navbar, Footer, AppShell, RequireAuth
+src/services/ (pure TS, no React)
+  types.ts  catalog.ts  demoData.ts  geo.ts  matchingEngine.ts  carbonCalculator.ts
+  validation.ts  actions.ts  analytics.ts  storageService.ts  integrations.ts  ai.ts
+```
+
+- **State:** `AppProvider` holds `AppState` (`schemaVersion: 2`: session, accounts, companies, listings, requirements, deals, saved listings). Every action is a pure function in `services/actions.ts`; the provider supplies IDs/timestamps, validates against the latest state via a ref, and commits. Same hydration rules as the prototype: nothing is read during server render, saving starts only after a successful load, and corrupt or unsupported data is left untouched until the user resets.
+- **Persistence seam:** `storageService.ts` (load/save/clear `symbio-app-v2`) and `actions.ts` are where a Supabase adapter replaces local storage. `integrations.ts` already detects configuration; no SDK is installed.
+- **Matching:** `matchingEngine.evaluate()` applies hard gates (material compatibility table, quality, contamination, moisture, radius, ownership), then scores `M×0.40 + Q×0.25 + D×0.25 + P×0.10` and returns reasons and cautions.
+- **Deals:** request → negotiating (counter-offers) → accepted → in_transit (seller) → completed (buyer); decline/cancel branches. Only `completed` deals count toward impact.
+- **Carbon:** reused kg × material-specific illustrative factor (`catalog.ts`). Never presented as certified.
+- **Maps:** `map-view.tsx` renders a schematic SVG with labelled mock distances; it loads Google Maps only when `NEXT_PUBLIC_ENABLE_MAPS=true` and a browser key exist.
+- **AI:** `ai.ts` calls configured endpoints only; otherwise the classifier reports "not connected" and the assistant answers from the catalogue, clearly labelled.
+- **Prerendering:** pages are static; detail routes read params on the client inside Suspense. Time-dependent charts use `useClientNow()` so nothing time-based runs during prerender.
+
+---
+
+## Original three-hour prototype (`/prototype`)
+
+Source of truth for scope: [`plan.md`](../plan.md). The section below describes the prototype's wiring.
 
 ## Data flow
 

@@ -1,4 +1,14 @@
-# Symbio requirements (three-hour prototype)
+# SYMBIO requirements
+
+## Platform build (SYMBIO brief, 2 November 2026)
+
+Delivered on local demo data: landing page, auth (login/register/forgot/profile setup), dashboard, marketplace + listing details, add listing (with photo), requirements, smart matching (weighted, gated, explained), match details, negotiations (offers, counters, accept/decline, dispatch, receipt, messaging), map (schematic, Maps-ready), carbon impact dashboard, company profiles, transaction history (CSV), AI classifier and assistant interfaces (endpoint-ready, honest fallbacks). Verified with `pnpm check:platform` (14 checks) plus browser walkthroughs at desktop and 375 px.
+
+Remaining for a production version: Supabase auth/DB/storage with RLS, real verification, Google Maps with a key (untested here), real AI endpoints, payments, notifications, and reviewed carbon factors.
+
+---
+
+# Original three-hour prototype requirements
 
 Scope comes from [`plan.md`](../plan.md). This file tracks what each block delivers.
 
