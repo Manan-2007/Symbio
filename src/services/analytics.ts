@@ -91,3 +91,11 @@ export function trustScore(state: AppState, companyId: string): number {
   const completed = impactRecords(state, companyId).length;
   return Math.min(100, Math.round((company.verified ? 35 : 10) + avg * 8 + Math.min(completed, 5) * 5));
 }
+
+/** Seller reputation for badges: null when there is no history yet (unverified, no reviews, no completed trades). */
+export function sellerTrust(state: AppState, companyId: string): { score: number | null; completedTrades: number } {
+  const company = state.companies.find((c) => c.id === companyId);
+  const completedTrades = impactRecords(state, companyId).length;
+  if (!company || (!company.verified && company.reviews.length === 0 && completedTrades === 0)) return { score: null, completedTrades };
+  return { score: trustScore(state, companyId), completedTrades };
+}

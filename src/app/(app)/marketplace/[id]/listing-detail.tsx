@@ -11,6 +11,8 @@ import { Badge, Card, EmptyState, LoadingBlock, Notice } from "@/components/ui/p
 import { ConfirmDialog } from "@/components/ui/modal";
 import { MaterialArt } from "@/components/ui/visuals";
 import { MatchCard } from "@/components/match-card";
+import { TrustBadge } from "@/components/trust-badge";
+import { sellerTrust } from "@/services/analytics";
 import { ListingCard } from "@/components/listing-card";
 import { RequestModal } from "@/components/request-modal";
 import { CATEGORY_LABELS, CONTAMINATION_LABELS, QUALITY_LABELS, cityName, findMaterial } from "@/services/catalog";
@@ -39,6 +41,7 @@ export function ListingDetail() {
   const isOwner = me?.id === listing.companyId;
   const saved = me ? (state.savedListingIds[me.id] ?? []).includes(listing.id) : false;
   const guidance = materialGuidance(material);
+  const trust = sellerTrust(state, listing.companyId);
   const avgRating = company?.reviews.length ? company.reviews.reduce((s, r) => s + r.rating, 0) / company.reviews.length : null;
   const similar = state.listings.filter((l) => l.id !== listing.id && l.status === "active" && findMaterial(l.materialId)?.category === material.category).slice(0, 3);
   const openDeal = me && state.deals.find((d) => d.listingId === listing.id && d.buyerId === me.id && ["requested", "negotiating", "accepted", "in_transit"].includes(d.status));
@@ -80,7 +83,7 @@ export function ListingDetail() {
         </div>
 
         <div className="space-y-6">
-          <Card className="p-7 lg:sticky lg:top-6">
+          <Card className="p-7">
             <div className="flex flex-wrap gap-2">
               <Badge tone="green">{CATEGORY_LABELS[material.category]}</Badge>
               {listing.status === "closed" && <Badge tone="red">Closed</Badge>}
@@ -128,11 +131,12 @@ export function ListingDetail() {
               <div className="mt-3 flex items-center gap-3">
                 <div className="grid size-12 place-items-center rounded-full bg-sage font-display text-xl font-semibold text-forest-900">{company.name.charAt(0)}</div>
                 <div>
-                  <p className="flex items-center gap-1.5 font-semibold">{company.name}{company.verified && <ShieldCheck className="size-4 text-emerald" aria-label="Verified" />}</p>
+                  <p className="flex flex-wrap items-center gap-1.5 font-semibold">{company.name}{company.verified && <ShieldCheck className="size-4 text-emerald" aria-label="Verified" />}<TrustBadge score={trust.score} size="md" /></p>
                   <p className="text-[13px] text-muted">{company.industry} · {cityName(company.cityId, company.location)}</p>
                 </div>
               </div>
-              {avgRating !== null && <p className="mt-3 flex items-center gap-1 text-[13px]"><Star className="size-4 fill-gold text-gold" aria-hidden />{avgRating.toFixed(1)} <span className="text-muted">· {company.reviews.length} review{company.reviews.length === 1 ? "" : "s"}</span></p>}
+              <p className="mt-3 text-[12.5px] text-muted">{trust.score === null ? "New seller: no reviews or completed trades yet, shown at the neutral 70% baseline." : `${trust.completedTrades} completed trade${trust.completedTrades === 1 ? "" : "s"} on SYMBIO · trust score from verification, reviews and trades`}</p>
+              {avgRating !== null && <p className="mt-2 flex items-center gap-1 text-[13px]"><Star className="size-4 fill-gold text-gold" aria-hidden />{avgRating.toFixed(1)} <span className="text-muted">· {company.reviews.length} review{company.reviews.length === 1 ? "" : "s"}</span></p>}
               <ButtonLink href={`/companies/${company.id}`} variant="secondary" size="sm" className="mt-4">View company profile</ButtonLink>
             </Card>
           )}

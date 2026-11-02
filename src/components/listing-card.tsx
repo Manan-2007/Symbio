@@ -6,6 +6,8 @@ import { useApp } from "@/components/app-provider";
 import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/primitives";
 import { MaterialArt } from "@/components/ui/visuals";
+import { TrustBadge } from "@/components/trust-badge";
+import { sellerTrust } from "@/services/analytics";
 import { CATEGORY_LABELS, cityName, findMaterial } from "@/services/catalog";
 import type { Listing } from "@/services/types";
 import { cx, fmtKg, fmtPricePerKg } from "@/utils/format";
@@ -16,6 +18,7 @@ export function ListingCard({ listing, compact = false }: { listing: Listing; co
   const material = findMaterial(listing.materialId);
   const company = state.companies.find((c) => c.id === listing.companyId);
   const saved = me ? (state.savedListingIds[me.id] ?? []).includes(listing.id) : false;
+  const trust = sellerTrust(state, listing.companyId);
   if (!material) return null;
 
   return (
@@ -34,9 +37,10 @@ export function ListingCard({ listing, compact = false }: { listing: Listing; co
           </h3>
           <p className="shrink-0 pt-1 text-[15px] font-bold text-forest">{fmtPricePerKg(listing.pricePerKg)}</p>
         </div>
-        <p className="mt-1 flex items-center gap-1.5 text-[13px] text-muted">
-          {company?.name ?? "Unknown company"}
-          {company?.verified && <ShieldCheck className="size-3.5 text-emerald" aria-label="Verified company" />}
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
+          <span className="truncate">{company?.name ?? "Unknown company"}</span>
+          {company?.verified && <ShieldCheck className="size-3.5 shrink-0 text-emerald" aria-label="Verified company" />}
+          <TrustBadge score={trust.score} />
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line pt-4 text-[13px] text-ink/80">
           <span className="font-semibold text-ink">{fmtKg(listing.quantityKg)}</span>
