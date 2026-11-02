@@ -3,7 +3,7 @@ import { materialName } from "./catalog";
 import { matchesForRequirement } from "./matchingEngine";
 
 // In-app notifications derived from activity (prototype). A production build would persist them
-// server-side (see the `notifications` table in supabase/schema.sql) and add email/SMS delivery.
+// server-side and add email/SMS delivery.
 
 export type NotificationKind = "deal" | "payment" | "message" | "verification" | "match";
 export type AppNotification = { id: string; kind: NotificationKind; at: string; title: string; body: string; href: string; unread: boolean };

@@ -8,7 +8,7 @@ import { SelectField, TextAreaField, TextField } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { isEmail } from "@/services/validation";
-import { submitContactMessage } from "@/services/supabase";
+import { saveContactMessage } from "@/services/storageService";
 
 type Errors = Partial<Record<"name" | "email" | "message", string>>;
 
@@ -32,15 +32,11 @@ export function ContactForm() {
     setErrors(next);
     if (Object.keys(next).length) return;
     setBusy(true);
-    const result = await submitContactMessage({ name, email, message, company: String(data.get("company") ?? "").trim(), topic: String(data.get("topic") ?? "other") });
+    const stored = saveContactMessage({ name, email, message, company: String(data.get("company") ?? "").trim(), topic: String(data.get("topic") ?? "other") });
     setBusy(false);
-    if (result === "failed") {
-      toast("error", "Message not sent", "The database rejected it or is not set up yet. Please try again later.");
-      return;
-    }
     form.reset();
-    setSent(result === "stored" ? "stored" : "local");
-    toast("success", result === "stored" ? "Message sent" : "Message prepared", result === "stored" ? "Saved to SYMBIO's Supabase database." : "Supabase is not configured, so nothing was sent.");
+    setSent(stored ? "stored" : "local");
+    toast("success", "Message saved", stored ? "Stored in this browser (demo build)." : "Browser storage is unavailable, so nothing was kept.");
   }
 
   return (
@@ -58,9 +54,9 @@ export function ContactForm() {
         <TextAreaField name="message" label="Message" error={errors.message} className="sm:col-span-2" maxLength={1000} />
         <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
           <Button type="submit" disabled={busy} icon={<Send className="size-4" />}>{busy ? "Sending…" : "Send message"}</Button>
-          <p className="text-[12.5px] text-muted">Stored securely in Supabase (insert-only).</p>
+          <p className="text-[12.5px] text-muted">Demo build: messages are saved in this browser only.</p>
         </div>
-        {sent && <Notice tone="green" className="sm:col-span-2">{sent === "stored" ? "Thanks! Your message reached the SYMBIO team." : "Thanks! Supabase isn\u2019t configured in this build, so nothing was transmitted."}</Notice>}
+        {sent && <Notice tone="green" className="sm:col-span-2">{sent === "stored" ? "Thanks! Your message is saved in this browser. In a live deployment it would reach the SYMBIO team." : "Thanks! Browser storage is unavailable, so nothing was kept."}</Notice>}
       </form>
     </Card>
   );
