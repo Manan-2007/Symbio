@@ -28,14 +28,14 @@ Discover compatible partners. Understand the match. Negotiate the exchange. Meas
 
 A furniture workshop has sawdust it needs to clear. A mushroom farm needs growing substrate. A garment factory has cotton offcuts. An insulation maker needs fibre. The material already has another use; the missing connection is between the businesses.
 
-**SYMBIO makes that connection visible and actionable.** Waste generators publish by-products with quantity, price and quality information. Material consumers describe what they need. The platform finds compatible pairs, explains their fit, and carries the exchange through negotiation, dispatch, receipt and impact reporting.
+**SYMBIO makes that connection visible and actionable.** Waste generators publish by-products with quantity, price and quality information. Material consumers describe what they need The platform finds compatible pairs, explains their fit, and carries the exchange through negotiation, dispatch, receipt and impact reporting.
 
 | For generators | For consumers | For the circular economy |
 | :--- | :--- | :--- |
 | Find a use for industrial surplus and explore an alternative to disposal. | Discover secondary raw materials that fit material, quality, distance and budget needs. | Track material kept in use through completed exchanges. |
 
 > [!NOTE]
-> **This is a working demonstration platform.** Companies, listings, reviews, testimonials and historical exchanges are fictional. Accounts and marketplace state live in each browser’s `localStorage`. Payments and verification are simulated; carbon figures are illustrative estimates.
+> **This is a working demonstration platform.** Companies, listings, reviews, testimonials and historical exchanges are fictional. Accounts and marketplace state live in each browser’s `localStorage`. Payments and verification are simulated; carbon figures are illustrative estimates
 
 ## Four standout features
 
