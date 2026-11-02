@@ -1,5 +1,7 @@
 import type { Category, Material } from "./types";
 import { CATEGORY_LABELS, MATERIALS, findMaterial } from "./catalog";
+import { parseBarterEstimate } from "./barter";
+import type { BarterEstimate, BarterInput } from "./barter";
 
 // AI integration layer. Calls the app's own server routes (Azure OpenAI). When those are not
 // configured, nothing pretends to be AI: the classifier says so and the assistant uses the catalogue.
@@ -112,4 +114,28 @@ export async function askAssistant(question: string, context = ""): Promise<Assi
     /* fall back below */
   }
   return answerFromCatalogue(question);
+}
+
+export type BarterResult =
+  | { status: "ok"; estimate: BarterEstimate; generatedAt: string }
+  | { status: "unavailable"; message: string }
+  | { status: "error"; message: string };
+
+/** Requests an Upcycling Yield & MVE barter estimate from the server (Azure OpenAI). */
+export async function estimateBarter(input: BarterInput): Promise<BarterResult> {
+  let response: Response;
+  try {
+    response = await fetch("/api/ai/barter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  } catch {
+    return { status: "unavailable", message: "The estimator service could not be reached." };
+  }
+  if (response.status === 503) return { status: "unavailable", message: "The AI estimator is not configured on this server." };
+  try {
+    const data = (await response.json()) as { estimate?: unknown; generatedAt?: unknown; error?: unknown };
+    const estimate = response.ok ? parseBarterEstimate(data.estimate) : null;
+    if (!estimate) return { status: "error", message: typeof data.error === "string" && data.error.length < 200 ? data.error : "The estimator returned an incomplete result. Try again." };
+    return { status: "ok", estimate, generatedAt: typeof data.generatedAt === "string" ? data.generatedAt : new Date().toISOString() };
+  } catch {
+    return { status: "error", message: "The estimator returned an unreadable result." };
+  }
 }
