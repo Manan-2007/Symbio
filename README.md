@@ -91,9 +91,21 @@ For example, **400 kg of sawdust × 0.4 = 160 kgCO₂e** under the demo’s inve
 
 ## Screenshots
 
-Actual captures of the [deployed application](https://symbio-eight.vercel.app/), taken on **2 November 2026** in its responsive narrow-screen layout. Click an image to inspect it at full resolution. All figures shown are demo data.
+Actual captures of the [deployed application](https://symbio-eight.vercel.app/), taken on **2 November 2026** across desktop and narrow-screen layouts. Click an image to inspect it at full resolution. All figures shown are demo data.
 
 <table>
+  <tr>
+    <td width="50%" valign="top" align="center">
+      <strong>Exchange dashboard</strong><br />
+      <sub>Activity, completed reuse, matches and charts in the updated layout.</sub><br /><br />
+      <a href="docs/screenshots/showcase/07-dashboard.jpg"><img src="docs/screenshots/showcase/07-dashboard.jpg" alt="SYMBIO dashboard with exchange metrics, charts and assistant in the sidebar" width="340" /></a>
+    </td>
+    <td width="50%" valign="top" align="center">
+      <strong>Worldwide location search</strong><br />
+      <sub>London selected as the map origin through Geoapify place search.</sub><br /><br />
+      <a href="docs/screenshots/showcase/08-worldwide-map.jpg"><img src="docs/screenshots/showcase/08-worldwide-map.jpg" alt="Map page showing London as a selected origin with a loaded Geoapify map" width="340" /></a>
+    </td>
+  </tr>
   <tr>
     <td width="50%" valign="top" align="center">
       <strong>Explainable smart matches</strong><br />
@@ -128,7 +140,7 @@ Actual captures of the [deployed application](https://symbio-eight.vercel.app/),
   </tr>
 </table>
 
-> **Screenshot context:** These images were captured before the external credentials were configured. The barter screenshot shows the input workflow, not a generated result. The current app uses server-side Azure OpenAI and Geoapify integrations when their environment variables are present.
+> **Screenshot context:** The original narrow-screen captures predate integration setup. The barter screenshot shows the input workflow, not a generated result. The new dashboard and London map captures show the updated production deployment.
 
 ## Everything else built around the exchange
 
