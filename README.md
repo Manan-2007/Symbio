@@ -6,7 +6,7 @@
 
 **An industrial by-product exchange that connects surplus materials to their next useful life.**
 
-Discover compatible partners. Understand the match. Negotiate the exchange. Measure the reuse.
+Discover compatible partners and client suppliers. Understand the match. Negotiate the exchange. Measure the reuse.
 
 [![Live demo](https://img.shields.io/badge/Explore_live_demo-1e4d36?style=for-the-badge&logo=vercel&logoColor=white)](https://symbio-eight.vercel.app/)
 [![Source](https://img.shields.io/badge/View_source-163a29?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Manan-2007/Symbio)
