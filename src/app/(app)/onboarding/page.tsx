@@ -23,11 +23,11 @@ function ProfileForm() {
 
   const toggle = (role: Role) => setRoles((r) => (r.includes(role) ? r.filter((x) => x !== role) : [...r, role]));
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
     const year = String(d.get("foundedYear") ?? "").trim();
-    const r = await updateProfile({
+    const r = updateProfile({
       name: d.get("name"), industry: d.get("industry"), cityId: d.get("cityId"), phone: d.get("phone"),
       description: d.get("description"), roles, foundedYear: year === "" ? Number.NaN : Number(year),
     });

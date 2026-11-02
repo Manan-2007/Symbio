@@ -29,7 +29,7 @@ export function PaymentModal({ deal, open, onClose }: { deal: Deal; open: boolea
   async function pay() {
     setBusy(true);
     await new Promise((r) => setTimeout(r, 900)); // simulated provider round-trip
-    const r = await payForDeal(deal.id, method);
+    const r = payForDeal(deal.id, method);
     setBusy(false);
     if (!r.ok) return toast("error", r.error);
     toast("success", "Payment held in escrow", "Simulated payment. The seller can now dispatch; funds release when you confirm receipt.");

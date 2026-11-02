@@ -46,8 +46,8 @@ export function ListingCard({ listing, compact = false }: { listing: Listing; co
       </div>
       <button
         type="button"
-        onClick={async () => {
-          const r = await toggleSaved(listing.id);
+        onClick={() => {
+          const r = toggleSaved(listing.id);
           if (!r.ok) toast("info", r.error);
           else toast("success", r.value ? "Listing saved" : "Removed from saved");
         }}

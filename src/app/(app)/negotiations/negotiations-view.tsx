@@ -61,27 +61,27 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
   function confirmPending() {
     if (!pending) return;
     const map = {
-      accept: async () => done(await app.acceptDeal(deal.id), "Terms accepted", "The seller can now dispatch the material."),
-      reject: async () => done(await app.rejectDeal(deal.id), "Request declined"),
-      cancel: async () => done(await app.cancelDeal(deal.id), "Exchange cancelled"),
-      receive: async () => done(await app.markReceived(deal.id), "Receipt confirmed", app.mode === "shared" ? "Receipt recorded. This exchange now counts toward your impact." : "Escrow released to the seller (simulated)."),
+      accept: () => done(app.acceptDeal(deal.id), "Terms accepted", "The seller can now dispatch the material."),
+      reject: () => done(app.rejectDeal(deal.id), "Request declined"),
+      cancel: () => done(app.cancelDeal(deal.id), "Exchange cancelled"),
+      receive: () => done(app.markReceived(deal.id), "Receipt confirmed", "Escrow released to the seller. This exchange now counts toward your impact."),
     };
     map[pending.kind]();
     setPending(null);
   }
 
-  async function counter(e: FormEvent<HTMLFormElement>) {
+  function counter(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
-    const r = await app.counterOffer(deal.id, { quantityKg: parseNumber(d.get("qty")), pricePerKg: parseNumber(d.get("price")), note: d.get("note") });
+    const r = app.counterOffer(deal.id, { quantityKg: parseNumber(d.get("qty")), pricePerKg: parseNumber(d.get("price")), note: d.get("note") });
     if (!r.ok) return setError(r.error);
     toast("success", "Counter-offer sent");
     setCounterOpen(false);
   }
 
-  async function send(e: FormEvent) {
+  function send(e: FormEvent) {
     e.preventDefault();
-    const r = await app.sendMessage(deal.id, message);
+    const r = app.sendMessage(deal.id, message);
     if (r.ok) setMessage("");
     else toast("error", r.error);
   }
@@ -154,13 +154,12 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
             <Button size="sm" variant="ghost" onClick={() => setPending({ kind: "cancel", title: "Withdraw your offer?", body: "This cancels the negotiation.", label: "Withdraw", danger: true })}>Withdraw</Button>
           </div>
         )}
-        {app.mode === "shared" && deal.status === "accepted" && <Notice>Arrange payment and transport directly with the other business. Symbio does not collect or hold funds.</Notice>}
         {deal.status === "accepted" && (
           <div className="flex flex-wrap items-center gap-2">
-            {app.mode === "demo" && isBuyer && !deal.payment && <Button icon={<Lock className="size-4" />} onClick={() => setPayOpen(true)}>Pay {fmtInr(terms.quantityKg * terms.pricePerKg)} into escrow</Button>}
+            {isBuyer && !deal.payment && <Button icon={<Lock className="size-4" />} onClick={() => setPayOpen(true)}>Pay {fmtInr(terms.quantityKg * terms.pricePerKg)} into escrow</Button>}
             {isBuyer && deal.payment && <p className="text-[13px] text-muted">Paid into escrow. Waiting for {other?.name} to dispatch.</p>}
-            {app.mode === "demo" && !isBuyer && !deal.payment && <p className="text-[13px] text-muted">Agreed. Waiting for {other?.name} to pay into escrow before you dispatch.</p>}
-            {!isBuyer && (deal.payment || app.mode === "shared") && <Button icon={<Truck className="size-4" />} onClick={async () => done(await app.markDispatched(deal.id), "Marked as dispatched", "The buyer will confirm receipt.")}>Mark as dispatched</Button>}
+            {!isBuyer && !deal.payment && <p className="text-[13px] text-muted">Agreed. Waiting for {other?.name} to pay into escrow before you dispatch.</p>}
+            {!isBuyer && deal.payment && <Button icon={<Truck className="size-4" />} onClick={() => done(app.markDispatched(deal.id), "Marked as dispatched", "The buyer will confirm receipt.")}>Mark as dispatched</Button>}
             <Button size="sm" variant="ghost" onClick={() => setPending({ kind: "cancel", title: "Cancel this exchange?", body: deal.payment ? "Agreed terms are voided and the escrow payment is refunded to the buyer (simulated)." : "Agreed terms will be voided.", label: "Cancel exchange", danger: true })}>Cancel exchange</Button>
           </div>
         )}

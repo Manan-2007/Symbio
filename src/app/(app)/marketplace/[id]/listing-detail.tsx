@@ -97,7 +97,7 @@ export function ListingDetail() {
             {isOwner ? (
               <div className="mt-6 space-y-3">
                 <Notice tone="green">This is your listing.</Notice>
-                <Button variant="secondary" className="w-full" onClick={() => (listing.status === "active" ? setConfirmClose(true) : (async () => { const r = await setListingStatus(listing.id, "active"); toast(r.ok ? "success" : "error", r.ok ? "Listing reopened" : r.error); })())}>
+                <Button variant="secondary" className="w-full" onClick={() => (listing.status === "active" ? setConfirmClose(true) : (() => { const r = setListingStatus(listing.id, "active"); toast(r.ok ? "success" : "error", r.ok ? "Listing reopened" : r.error); })())}>
                   {listing.status === "active" ? "Close listing" : "Reopen listing"}
                 </Button>
               </div>
@@ -114,7 +114,7 @@ export function ListingDetail() {
                   variant="secondary"
                   aria-pressed={saved}
                   icon={<Heart className={saved ? "size-4 fill-current text-error" : "size-4"} />}
-                  onClick={async () => { const r = await toggleSaved(listing.id); toast(r.ok ? "success" : "info", r.ok ? (r.value ? "Listing saved" : "Removed from saved") : r.error); }}
+                  onClick={() => { const r = toggleSaved(listing.id); toast(r.ok ? "success" : "info", r.ok ? (r.value ? "Listing saved" : "Removed from saved") : r.error); }}
                 >
                   {saved ? "Saved" : "Save listing"}
                 </Button>
@@ -160,7 +160,7 @@ export function ListingDetail() {
       <ConfirmDialog
         open={confirmClose}
         onCancel={() => setConfirmClose(false)}
-        onConfirm={async () => { const r = await setListingStatus(listing.id, "closed"); setConfirmClose(false); toast(r.ok ? "success" : "error", r.ok ? "Listing closed" : r.error, r.ok ? "It no longer appears in the marketplace or matches." : undefined); }}
+        onConfirm={() => { const r = setListingStatus(listing.id, "closed"); setConfirmClose(false); toast(r.ok ? "success" : "error", r.ok ? "Listing closed" : r.error, r.ok ? "It no longer appears in the marketplace or matches." : undefined); }}
         title="Close this listing?"
         body="It will be hidden from the marketplace and matching. Existing negotiations stay available. You can reopen it later."
         confirmLabel="Close listing"

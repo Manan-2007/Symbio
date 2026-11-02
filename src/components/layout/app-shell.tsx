@@ -52,7 +52,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { me, logout, resetDemo, mode } = useApp();
+  const { me, logout, resetDemo } = useApp();
   const { toast } = useToast();
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -103,16 +103,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <p className="truncate text-[13px] font-semibold">{me.name}</p>
               <p className="truncate text-[12px] text-muted">{me.industry} · {cityName(me.cityId)}</p>
             </div>
-            <button type="button" onClick={async () => { await logout(); toast("info", "Signed out"); router.push("/"); onNavigate?.(); }} className="focus-ring rounded-full p-2 text-muted hover:bg-mist hover:text-ink" aria-label="Sign out">
+            <button type="button" onClick={() => { logout(); toast("info", "Signed out"); router.push("/"); onNavigate?.(); }} className="focus-ring rounded-full p-2 text-muted hover:bg-mist hover:text-ink" aria-label="Sign out">
               <LogOut className="size-[18px]" />
             </button>
           </div>
         ) : (
           <ButtonLink href="/login" className="w-full" icon={<LogIn className="size-4" />} onClick={onNavigate}>Sign in</ButtonLink>
         )}
-        {mode === "demo" && <button type="button" onClick={() => setConfirmReset(true)} className="focus-ring mt-3 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[12px] font-medium text-muted hover:text-ink">
+        <button type="button" onClick={() => setConfirmReset(true)} className="focus-ring mt-3 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[12px] font-medium text-muted hover:text-ink">
           <RotateCcw className="size-3.5" aria-hidden /> Reset demo data
-        </button>}
+        </button>
       </div>
       <ConfirmDialog
         open={confirmReset}
@@ -143,7 +143,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { storageStatus, resetDemo, mode, syncError, refresh, busy } = useApp();
+  const { storageStatus, resetDemo } = useApp();
   const [drawer, setDrawer] = useState(false);
 
   // Lock body scroll while the mobile drawer is open (links close it via onNavigate).
@@ -179,7 +179,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="min-w-0">
         <div className="border-b border-[#ecdfbd] bg-notice px-5 py-2 text-center text-[12.5px] font-medium text-notice-text">
-          {mode === "shared" ? "Shared workspace · Supabase accounts · Company-reported exchanges" : "Demo · Fictional companies"} · {mode === "shared" ? (busy ? "Saving…" : "Syncs every 30 seconds") : storageStatus === "unavailable" ? "Changes cannot be saved in this browser" : storageStatus === "corrupt" || storageStatus === "unsupported" ? "Saving paused" : "Data saved in this browser"}
+          Demo · Fictional companies · {storageStatus === "unavailable" ? "Changes cannot be saved in this browser" : storageStatus === "corrupt" || storageStatus === "unsupported" ? "Saving paused" : "Data saved in this browser"}
         </div>
         <div className="mx-auto hidden max-w-[1180px] justify-end px-8 pt-5 lg:flex"><NotificationBell /></div>
         <div className="mx-auto max-w-[1180px] px-5 py-8 sm:px-8 lg:pt-2 lg:pb-10">
@@ -189,7 +189,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Button size="sm" variant="secondary" className="ml-2" onClick={resetDemo}>Reset and start saving</Button>
             </Notice>
           )}
-          {syncError && <Notice tone="red" className="mb-6">{syncError} <Button size="sm" onClick={() => void refresh()}>Retry sync</Button></Notice>}
           {children}
         </div>
       </main>

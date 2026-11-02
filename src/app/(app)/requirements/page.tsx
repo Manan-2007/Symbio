@@ -27,11 +27,11 @@ function RequirementForm({ onDone }: { onDone: () => void }) {
   const [minQuality, setMinQuality] = useState<QualityGrade>("B");
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
     const moistureRaw = String(d.get("moisture") ?? "").trim();
-    const r = await addRequirement({
+    const r = addRequirement({
       materialId: d.get("materialId"), quantityKg: parseNumber(d.get("quantity")), maxBudgetPerKg: parseNumber(d.get("budget")),
       cityId: d.get("cityId"), maxDistanceKm: parseNumber(d.get("radius")), minQuality, maxContamination: d.get("contamination"),
       maxMoisturePct: moistureRaw === "" ? null : Number(moistureRaw), delivery, notes: d.get("notes"),
@@ -131,7 +131,7 @@ function Requirements() {
                   {r.status === "open" ? (
                     <ButtonLink href={`/matches?req=${r.id}`} size="sm" iconRight={<ArrowRight className="size-3.5" />}>{matches.length} match{matches.length === 1 ? "" : "es"}</ButtonLink>
                   ) : <span className="text-[13px] text-muted">Not matching while closed</span>}
-                  <Button size="sm" variant="ghost" onClick={async () => { const res = await setRequirementStatus(r.id, r.status === "open" ? "closed" : "open"); toast(res.ok ? "success" : "error", res.ok ? (r.status === "open" ? "Requirement closed" : "Requirement reopened") : res.error); }}>
+                  <Button size="sm" variant="ghost" onClick={() => { const res = setRequirementStatus(r.id, r.status === "open" ? "closed" : "open"); toast(res.ok ? "success" : "error", res.ok ? (r.status === "open" ? "Requirement closed" : "Requirement reopened") : res.error); }}>
                     {r.status === "open" ? "Close" : "Reopen"}
                   </Button>
                 </div>

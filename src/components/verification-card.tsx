@@ -17,14 +17,14 @@ const MAX_DOC_BYTES = 5 * 1024 * 1024;
 
 /** Own-company verification panel: submit GSTIN + document, then a prototype review step. */
 export function VerificationCard({ company }: { company: Company }) {
-  const { submitVerification, simulateVerificationReview, mode } = useApp();
+  const { submitVerification, simulateVerificationReview } = useApp();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [doc, setDoc] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const v = company.verification;
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const gstin = String(data.get("gstin") ?? "").trim().toUpperCase();
@@ -32,7 +32,7 @@ export function VerificationCard({ company }: { company: Company }) {
     if (!doc) return setError("Attach your GST certificate or company registration.");
     if (doc.size > MAX_DOC_BYTES) return setError("Document must be 5 MB or smaller.");
     if (data.get("declare") !== "on") return setError("Confirm the declaration to continue.");
-    const r = await submitVerification({ gstin, documentName: doc.name });
+    const r = submitVerification({ gstin, documentName: doc.name });
     if (!r.ok) return setError(r.error);
     toast("success", "Submitted for verification", "Our team reviews documents within 2 working days (simulated).");
     setOpen(false);
@@ -58,8 +58,8 @@ export function VerificationCard({ company }: { company: Company }) {
           <p className="text-[13px] text-muted">GSTIN {v.gstin} · {v.documentName} · submitted {fmtDate(v.submittedAt)}</p>
           <Notice>Prototype: no reviewer is connected. Use the buttons below to simulate the SYMBIO team&apos;s decision.</Notice>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" icon={<ShieldCheck className="size-4" />} onClick={async () => { const r = await simulateVerificationReview("verified"); toast(r.ok ? "success" : "error", r.ok ? "Company verified" : r.error); }}>Simulate approval</Button>
-            <Button size="sm" variant="ghost" icon={<ShieldX className="size-4" />} onClick={async () => { const r = await simulateVerificationReview("rejected"); toast(r.ok ? "info" : "error", r.ok ? "Verification rejected (simulated)" : r.error); }}>Simulate rejection</Button>
+            <Button size="sm" icon={<ShieldCheck className="size-4" />} onClick={() => { const r = simulateVerificationReview("verified"); toast(r.ok ? "success" : "error", r.ok ? "Company verified" : r.error); }}>Simulate approval</Button>
+            <Button size="sm" variant="ghost" icon={<ShieldX className="size-4" />} onClick={() => { const r = simulateVerificationReview("rejected"); toast(r.ok ? "info" : "error", r.ok ? "Verification rejected (simulated)" : r.error); }}>Simulate rejection</Button>
           </div>
         </div>
       ) : (

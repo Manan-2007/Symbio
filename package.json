@@ -12,7 +12,6 @@
     "check:platform": "tsc src/services/*.ts --outDir .check-platform --module commonjs --target es2022 --lib es2022,dom --moduleResolution node --skipLibCheck --strict && node scripts/check-platform.mjs ./.check-platform"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "framer-motion": "^14.9.0",
     "lucide-react": "^1.66.0",
@@ -22,7 +21,6 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.14",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -37,8 +37,8 @@ export function WatchDemo({ open, onClose }: { open: boolean; onClose: () => voi
           {step < STEPS.length - 1 ? (
             <Button onClick={() => setStep(step + 1)} iconRight={<ChevronRight className="size-4" />}>Next</Button>
           ) : (
-            <Button onClick={async () => {
-              const r = await loginAsCompany("co-freshgrow");
+            <Button onClick={() => {
+              const r = loginAsCompany("co-freshgrow");
               if (r.ok) { toast("success", "Exploring as FreshGrow Mushroom Farm", "Demo account, no password needed."); onClose(); setStep(0); router.push("/matches"); }
               else toast("error", r.error);
             }}>Try it live as FreshGrow</Button>
