@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/primitives";
 import { cityName } from "@/services/catalog";
 import { isEmail } from "@/services/validation";
+import { DEMO_PASSWORD } from "@/services/demoData";
 
 export default function LoginPage() {
   const { state, loginWithEmail, loginAsCompany, isHydrated } = useApp();
@@ -19,14 +20,14 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
     if (!isEmail(email)) return setError("Enter a valid business email.");
     if (!password) return setError("Enter your password.");
-    const r = loginWithEmail(email);
+    const r = await loginWithEmail(email, password);
     if (!r.ok) return setError(r.error);
     toast("success", "Welcome back", "Signed in to your demo account.");
     router.push("/dashboard");
@@ -38,7 +39,7 @@ export default function LoginPage() {
     <div>
       <h1 className="font-display text-[42px] leading-none font-medium text-forest-950">Welcome back</h1>
       <p className="mt-3 text-[15px] text-muted">Sign in to manage listings, matches and exchanges.</p>
-      <Notice className="mt-6">Demo mode: passwords are not stored or verified. Any password works for an existing demo or registered email.</Notice>
+      <Notice className="mt-6">Demo build: accounts live in this browser&apos;s localStorage, with passwords stored as salted hashes. Demo companies use the password <strong>{DEMO_PASSWORD}</strong>.</Notice>
       <form onSubmit={submit} noValidate className="mt-6 space-y-4">
         <TextField name="email" type="email" label="Business email" autoComplete="email" placeholder="you@company.com" onChange={() => setError(null)} />
         <TextField name="password" type="password" label="Password" autoComplete="current-password" onChange={() => setError(null)} />

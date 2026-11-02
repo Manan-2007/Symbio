@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import * as A from "@/services/actions";
 import type { Ctx } from "@/services/actions";
 import { createSeedState } from "@/services/demoData";
+import { hashPassword, verifyPassword } from "@/services/password";
 import { clearState, loadState, saveState } from "@/services/storageService";
 import type { AppState, Company, Deal, Listing, Requirement, Result } from "@/services/types";
 
@@ -17,10 +18,10 @@ import type { AppState, Company, Deal, Listing, Requirement, Result } from "@/se
 export type StorageStatus = "loading" | "saved" | "unavailable" | "corrupt" | "unsupported";
 
 type Ops = {
-  loginWithEmail: (email: string) => Result<AppState>;
+  loginWithEmail: (email: string, password: string) => Promise<Result<AppState>>;
   loginAsCompany: (companyId: string) => Result<AppState>;
   logout: () => void;
-  register: (input: A.RegisterInput) => Result<AppState>;
+  register: (input: A.RegisterInput) => Promise<Result<AppState>>;
   updateProfile: (input: A.ProfileInput) => Result<AppState>;
   addListing: (input: A.ListingInput) => Result<Listing>;
   setListingStatus: (id: string, status: Listing["status"]) => Result<AppState>;
@@ -101,10 +102,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const ops = useMemo<Ops>(() => {
     const same = (s: AppState) => s;
     return {
-      loginWithEmail: (email) => run((s) => A.loginWithEmail(s, email), same),
+      loginWithEmail: async (email, password) => {
+        if (!isHydrated) return NOT_READY;
+        const account = A.findAccount(stateRef.current, email);
+        if (!account || !(await verifyPassword(password, account))) return { ok: false, error: "Email or password is incorrect." };
+        return run((s) => A.loginAsCompany(s, account.companyId), same);
+      },
       loginAsCompany: (id) => run((s) => A.loginAsCompany(s, id), same),
       logout: () => { if (isHydrated) commit(A.logout(stateRef.current)); },
-      register: (input) => run((s, ctx) => A.register(s, input, ctx), same),
+      register: async (input) => {
+        if (!isHydrated) return NOT_READY;
+        if (typeof input.password !== "string" || input.password.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
+        const { salt, hash } = await hashPassword(input.password);
+        return run((s, ctx) => A.register(s, { ...input, salt, passwordHash: hash }, ctx), same);
+      },
       updateProfile: (input) => run((s) => A.updateProfile(s, input), same),
       addListing: (input) => {
         const r = run((s, ctx) => A.addListing(s, input, ctx), (v) => v.state);
