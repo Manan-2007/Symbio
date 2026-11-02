@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${manrope.variable} h-full`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${cormorant.variable} ${manrope.variable} h-full`}>
       <body className="min-h-full">
         <ToastProvider>
           <AppProvider>{children}</AppProvider>

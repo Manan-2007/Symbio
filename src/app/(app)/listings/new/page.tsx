@@ -130,7 +130,7 @@ function AddListingForm() {
       </div>
 
       <div className="space-y-6">
-        <Card className="overflow-hidden lg:sticky lg:top-6">
+        <Card className="overflow-hidden">
           <div className="relative h-56">
             <MaterialArt category={findMaterial(materialId)!.category} imageUrl={image} alt="Listing photo preview" className="h-full" />
             {imageBusy && <div className="absolute inset-0 grid place-items-center bg-white/60"><Loader2 className="size-6 animate-spin text-forest" /></div>}

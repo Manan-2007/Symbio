@@ -154,6 +154,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => { document.body.style.overflow = ""; };
   }, [drawer]);
 
+  // The drawer is hidden at lg+, so close it (and release the scroll lock) when the viewport widens.
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => { if (e.matches) setDrawer(false); };
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, []);
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
       <aside className="sticky top-0 z-30 hidden h-dvh self-start border-r border-line bg-[#fbfaf5] lg:block"><Sidebar /></aside>
