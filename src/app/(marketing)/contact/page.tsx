@@ -12,7 +12,7 @@ export default function ContactPage() {
         <p className="mt-5 max-w-md text-[16px] leading-relaxed text-muted">Questions about listing materials, onboarding your plant, or piloting SYMBIO in your industrial cluster? Send a note.</p>
         <dl className="mt-10 space-y-5 text-[14px]">
           <div><dt className="font-semibold">Pilot regions</dt><dd className="text-muted">Punjab, Chandigarh tricity, Haryana and Delhi NCR (demo)</dd></div>
-          <div><dt className="font-semibold">Response time</dt><dd className="text-muted">This demo does not send messages anywhere.</dd></div>
+          <div><dt className="font-semibold">Response time</dt><dd className="text-muted">Usually within two working days.</dd></div>
         </dl>
       </div>
       <ContactForm />
