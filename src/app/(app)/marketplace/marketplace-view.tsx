@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Heart, PlusCircle, Search, SlidersHorizontal, X } from "lucide-react";
 import { useApp } from "@/components/app-provider";
@@ -16,13 +16,34 @@ import { cx } from "@/utils/format";
 
 type Sort = "newest" | "price_asc" | "price_desc" | "qty_desc";
 
+type UrlFilters = { query: string; category: Category | ""; materialId: string };
+
+/** Reads deep-link filters: ?material=<id>, ?category=<id>, ?search= / ?q= / ?tag=<text>. */
+function filtersFromUrl(params: URLSearchParams): UrlFilters {
+  const material = findMaterial(params.get("material") ?? "");
+  const rawCategory = params.get("category") ?? "";
+  const category = (CATEGORIES as readonly string[]).includes(rawCategory) ? (rawCategory as Category) : material?.category ?? "";
+  // An unknown category word (e.g. ?category=coffee) is treated as a search term rather than dropped.
+  const text = params.get("search") ?? params.get("q") ?? params.get("tag") ?? (rawCategory && !category ? rawCategory : "");
+  return { query: text.trim().slice(0, 100), category, materialId: material?.id ?? "" };
+}
+
+/**
+ * Remounts the filter state whenever the URL query changes, so in-app links (e.g. from the
+ * assistant) apply their filters even when the Marketplace is already open.
+ */
 export function MarketplaceView() {
   const params = useSearchParams();
+  const key = params.toString();
+  return <MarketplaceFilters key={key} initial={filtersFromUrl(new URLSearchParams(key))} />;
+}
+
+function MarketplaceFilters({ initial }: { initial: UrlFilters }) {
+  const router = useRouter();
   const { state, me, isHydrated } = useApp();
-  const initialCategory = (CATEGORIES as readonly string[]).includes(params.get("category") ?? "") ? (params.get("category") as Category) : "";
-  const initialMaterial = findMaterial(params.get("material") ?? "")?.id ?? "";
-  const [query, setQuery] = useState(initialMaterial ? findMaterial(initialMaterial)!.name : "");
-  const [category, setCategory] = useState<Category | "">(initialMaterial ? findMaterial(initialMaterial)!.category : initialCategory);
+  const [query, setQuery] = useState(initial.query);
+  const [category, setCategory] = useState<Category | "">(initial.category);
+  const [materialId, setMaterialId] = useState(initial.materialId);
   const [cityId, setCityId] = useState("");
   const [minKg, setMinKg] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -40,6 +61,7 @@ export function MarketplaceView() {
       if (l.status !== "active") return false;
       const material = findMaterial(l.materialId);
       const company = state.companies.find((c) => c.id === l.companyId);
+      if (materialId && l.materialId !== materialId) return false;
       if (category && material?.category !== category) return false;
       if (cityId && l.cityId !== cityId) return false;
       if (Number.isFinite(min) && l.quantityKg < min) return false;
@@ -58,15 +80,20 @@ export function MarketplaceView() {
       qty_desc: (a, b) => b.quantityKg - a.quantityKg,
     };
     return list.sort(sorters[sort]);
-  }, [state.listings, state.companies, query, category, cityId, minKg, maxPrice, savedOnly, saved, sort]);
+  }, [state.listings, state.companies, query, category, materialId, cityId, minKg, maxPrice, savedOnly, saved, sort]);
 
   const locations = [...new Map(state.listings.map((l) => {
     const place = findCity(l.cityId, l.location);
     return [l.cityId, place] as const;
   })).values()].filter((place) => !!place).sort((a, b) => a.name.localeCompare(b.name));
 
-  const activeFilters = [category, cityId, minKg, maxPrice, savedOnly ? "saved" : "", query].filter(Boolean).length;
-  const clear = () => { setQuery(""); setCategory(""); setCityId(""); setMinKg(""); setMaxPrice(""); setSavedOnly(false); };
+  const activeFilters = [category, materialId, cityId, minKg, maxPrice, savedOnly ? "saved" : "", query].filter(Boolean).length;
+  const fromLink = Boolean(initial.query || initial.category || initial.materialId);
+  const clear = () => {
+    setQuery(""); setCategory(""); setMaterialId(""); setCityId(""); setMinKg(""); setMaxPrice(""); setSavedOnly(false);
+    // Drop deep-link params too, so the same link applies its filter again if clicked later.
+    if (fromLink) router.replace("/marketplace", { scroll: false });
+  };
   const numberError = (v: string, label: string) => (v.trim() !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0) ? `${label} must be 0 or more` : undefined);
 
   return (
@@ -79,11 +106,11 @@ export function MarketplaceView() {
       />
 
       <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter by category">
-        <button type="button" onClick={() => setCategory("")} aria-pressed={category === ""} className={cx("focus-ring shrink-0 rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors", category === "" ? "border-forest bg-forest text-white" : "border-line-strong bg-white hover:border-forest")}>All</button>
+        <button type="button" onClick={() => { setCategory(""); setMaterialId(""); }} aria-pressed={category === "" && !materialId} className={cx("focus-ring shrink-0 rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors", category === "" && !materialId ? "border-forest bg-forest text-white" : "border-line-strong bg-white hover:border-forest")}>All</button>
         {CATEGORIES.map((c) => {
           const Icon = CATEGORY_ICONS[c];
           return (
-            <button key={c} type="button" onClick={() => setCategory(category === c ? "" : c)} aria-pressed={category === c} className={cx("focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors", category === c ? "border-forest bg-forest text-white" : "border-line-strong bg-white hover:border-forest")}>
+            <button key={c} type="button" onClick={() => { setCategory(category === c ? "" : c); setMaterialId(""); }} aria-pressed={category === c} className={cx("focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors", category === c ? "border-forest bg-forest text-white" : "border-line-strong bg-white hover:border-forest")}>
               <Icon className="size-3.5" aria-hidden />{CATEGORY_LABELS[c]}
             </button>
           );
@@ -124,6 +151,23 @@ export function MarketplaceView() {
           </div>
         )}
       </div>
+
+      {(materialId || (fromLink && query)) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-sage bg-sage-50 px-4 py-3 text-[14px]">
+          <span className="text-muted">Showing</span>
+          {materialId && (
+            <button type="button" onClick={() => setMaterialId("")} className="focus-ring inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-semibold text-forest shadow-soft hover:bg-mist" aria-label={`Remove material filter ${findMaterial(materialId)?.name}`}>
+              {findMaterial(materialId)?.name}<X className="size-3.5" aria-hidden />
+            </button>
+          )}
+          {fromLink && query && (
+            <button type="button" onClick={() => setQuery("")} className="focus-ring inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-semibold text-forest shadow-soft hover:bg-mist" aria-label={`Remove search ${query}`}>
+              “{query}”<X className="size-3.5" aria-hidden />
+            </button>
+          )}
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={clear} icon={<X className="size-3.5" />}>Clear filter</Button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-[14px] text-muted" role="status">{isHydrated ? `${results.length} listing${results.length === 1 ? "" : "s"}` : "Loading listings…"}</p>
