@@ -35,6 +35,10 @@ type Ops = {
   markDispatched: (dealId: string) => Result<AppState>;
   markReceived: (dealId: string) => Result<AppState>;
   sendMessage: (dealId: string, text: string) => Result<AppState>;
+  payForDeal: (dealId: string, method: string) => Result<AppState>;
+  submitVerification: (input: { gstin: string; documentName: string }) => Result<AppState>;
+  simulateVerificationReview: (decision: "verified" | "rejected") => Result<AppState>;
+  markNotificationsSeen: () => void;
   resetDemo: () => void;
 };
 
@@ -127,6 +131,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDispatched: (id) => run((s, ctx) => A.markDispatched(s, id, ctx), same),
       markReceived: (id) => run((s, ctx) => A.markReceived(s, id, ctx), same),
       sendMessage: (id, text) => run((s, ctx) => A.sendMessage(s, id, text, ctx), same),
+      payForDeal: (id, method) => run((s, ctx) => A.payForDeal(s, id, method, ctx), same),
+      submitVerification: (input) => run((s, ctx) => A.submitVerification(s, input, ctx), same),
+      simulateVerificationReview: (decision) => run((s, ctx) => A.simulateVerificationReview(s, decision, ctx), same),
+      markNotificationsSeen: () => { run((s, ctx) => A.markNotificationsSeen(s, ctx), same); },
       resetDemo: () => {
         commit(createSeedState());
         // Removes only SYMBIO's key; the save effect then writes fresh seed data.

@@ -122,11 +122,21 @@ check("deal lifecycle: request → counter → accept → dispatch → receive; 
   assert.equal(actions.markDispatched(s, id, ctx()).ok, false, "buyer cannot dispatch");
   assert.equal(carbon.impactRecords(s).length, before, "accepted ≠ completed");
   s = actions.loginAsCompany(s, "co-green-furniture").value;
+  assert.equal(actions.markDispatched(s, id, ctx()).ok, false, "cannot dispatch before escrow payment");
+  assert.equal(actions.payForDeal(s, id, "upi", ctx()).ok, false, "seller cannot pay");
+  s = actions.loginAsCompany(s, "co-freshgrow").value;
+  assert.equal(actions.payForDeal(s, id, "bitcoin", ctx()).ok, false, "unknown method");
+  s = actions.payForDeal(s, id, "upi", ctx()).value;
+  assert.equal(s.deals.find((d) => d.id === id).payment.status, "held_in_escrow");
+  assert.equal(s.deals.find((d) => d.id === id).payment.amountInr, 1600);
+  assert.equal(actions.payForDeal(s, id, "upi", ctx()).ok, false, "no double payment");
+  s = actions.loginAsCompany(s, "co-green-furniture").value;
   s = actions.markDispatched(s, id, ctx()).value;
   s = actions.loginAsCompany(s, "co-freshgrow").value;
   s = actions.markReceived(s, id, ctx()).value;
   const deal = s.deals.find((d) => d.id === id);
   assert.equal(deal.status, "completed");
+  assert.equal(deal.payment.status, "released", "escrow released on receipt");
   assert.equal(analytics.transactionValue(deal), 1600);
   assert.equal(carbon.impactRecords(s).length, before + 1);
   assert.equal(s.listings.find((l) => l.id === "ls-sawdust-green").quantityKg, 500, "no hidden inventory change");
@@ -134,6 +144,37 @@ check("deal lifecycle: request → counter → accept → dispatch → receive; 
   assert.ok(validateAppState(JSON.parse(JSON.stringify(s))));
   const outsider = actions.loginAsCompany(s, "co-punjab-steel").value;
   assert.equal(actions.sendMessage(outsider, id, "hi", ctx()).ok, false, "non-party cannot message");
+});
+
+check("verification and notifications", () => {
+  let s = actions.register(seed, { companyName: "Verify Co", email: "v@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx()).value;
+  assert.equal(actions.submitVerification(s, { gstin: "BAD", documentName: "gst.pdf" }, ctx()).ok, false);
+  assert.equal(actions.submitVerification(s, { gstin: "03ABCDE1234F1Z5", documentName: "" }, ctx()).ok, false);
+  s = actions.submitVerification(s, { gstin: "03abcde1234f1z5", documentName: "gst.pdf" }, ctx()).value;
+  assert.equal(actions.submitVerification(s, { gstin: "03ABCDE1234F1Z5", documentName: "gst.pdf" }, ctx()).ok, false, "no duplicate pending");
+  s = actions.simulateVerificationReview(s, "verified", ctx("2026-11-02T11:00:00.000Z")).value;
+  const me = s.companies.find((c) => c.id === s.session.companyId);
+  assert.ok(me.verified && me.verification.gstin === "03ABCDE1234F1Z5");
+  assert.ok(validateAppState(JSON.parse(JSON.stringify(s))));
+  const { notificationsFor } = load("notifications");
+  const n1 = notificationsFor(s, me.id, "2026-11-02T12:00:00.000Z");
+  assert.ok(n1.some((n) => n.kind === "verification" && n.unread));
+  s = actions.markNotificationsSeen(s, ctx("2026-11-02T12:00:00.000Z")).value;
+  assert.equal(notificationsFor(s, me.id, "2026-11-02T12:00:00.000Z").filter((n) => n.unread).length, 0);
+  const green = notificationsFor(seed, "co-green-furniture", "2026-11-02T12:00:00.000Z");
+  assert.ok(green.some((n) => n.kind === "payment") && green.some((n) => n.kind === "deal"));
+});
+
+check("cancel after payment refunds", () => {
+  let s = actions.loginAsCompany(seed, "co-renew-packaging").value;
+  const r = actions.requestDeal(s, { listingId: "ls-pet-polymer", requirementId: "rq-renew-pet", quantityKg: 100, pricePerKg: 30, note: "" }, ctx());
+  s = r.value.state; const id = r.value.deal.id;
+  s = actions.loginAsCompany(s, "co-polymer-reborn").value;
+  s = actions.acceptDeal(s, id, ctx()).value;
+  s = actions.loginAsCompany(s, "co-renew-packaging").value;
+  s = actions.payForDeal(s, id, "neft", ctx()).value;
+  s = actions.cancelDeal(s, id, ctx()).value;
+  assert.equal(s.deals.find((d) => d.id === id).payment.status, "refunded");
 });
 
 check("stored-state validation rejects corruption", () => {
@@ -146,6 +187,9 @@ check("stored-state validation rejects corruption", () => {
     { ...good, session: { companyId: "nope" } },
     { ...good, savedListingIds: { "co-freshgrow": ["missing"] } },
     { ...good, companies: [...good.companies, good.companies[0]] },
+    { ...good, deals: [{ ...good.deals[0], payment: { ...good.deals[0].payment, status: "stolen" } }] },
+    { ...good, companies: [{ ...good.companies[0], verification: { status: "pending", gstin: "nope", documentName: "x", submittedAt: "2026-01-01", reviewedAt: null } }, ...good.companies.slice(1)] },
+    { ...good, notificationsSeenAt: { "co-missing": "2026-01-01" } },
     null, [], "x",
   ];
   for (const b of bads) assert.equal(validateAppState(b), null);
@@ -159,6 +203,7 @@ check("assistant answers from catalogue; classifier is honest when unconfigured"
   assert.equal(answerFromCatalogue("competitive pricing?").materialIds.length, 0, "no substring false positives");
 });
 
+// In Node the relative /api route is unreachable, which must surface as "unavailable", never a fake result.
 const cls = await classifyMaterialImage("data:image/png;base64,AAAA");
 assert.equal(cls.status, "unavailable");
 n++;

@@ -36,6 +36,28 @@ export type Material = {
 
 export type City = { id: string; name: string; state: string; lat: number; lng: number };
 
+export const PAYMENT_METHODS = ["upi", "netbanking", "card", "neft"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/** Prototype escrow payment. No real money moves and no payment details are collected. */
+export type Payment = {
+  reference: string;
+  method: PaymentMethod;
+  amountInr: number;
+  status: "held_in_escrow" | "released" | "refunded";
+  paidAt: string;
+  settledAt: string | null;
+};
+
+/** Prototype verification request. Only the GSTIN and the document's file name are kept. */
+export type VerificationRequest = {
+  status: "pending" | "verified" | "rejected";
+  gstin: string;
+  documentName: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+};
+
 export type Review = { id: string; author: string; rating: number; text: string; date: string };
 
 export type Company = {
@@ -52,6 +74,7 @@ export type Company = {
   reviews: Review[];
   isDemo: boolean;
   createdAt: string;
+  verification?: VerificationRequest;
 };
 
 export type Listing = {
@@ -105,6 +128,7 @@ export type Deal = {
   offers: Offer[];
   messages: Message[];
   history: StatusEvent[];
+  payment?: Payment;
   createdAt: string;
   updatedAt: string;
 };
@@ -120,6 +144,8 @@ export type AppState = {
   requirements: Requirement[];
   deals: Deal[];
   savedListingIds: Record<string, string[]>;
+  /** Per company: notifications at or before this time are read. */
+  notificationsSeenAt?: Record<string, string>;
 };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };

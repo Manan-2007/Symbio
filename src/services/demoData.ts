@@ -106,10 +106,14 @@ function pastDeal(id: string, listingId: string, buyerId: string, sellerId: stri
   ];
   if (status === "in_transit" || status === "completed") history.push({ status: "in_transit", byCompanyId: sellerId, at: day(3) });
   if (status === "completed") history.push({ status: "completed", byCompanyId: buyerId, at: day(5) });
+  const payment: Deal["payment"] = {
+    reference: `SYM-PAY-${id.replace(/\W/g, "").toUpperCase()}`, method: "upi", amountInr: qty * price,
+    status: status === "completed" ? "released" : "held_in_escrow", paidAt: day(2), settledAt: status === "completed" ? day(5) : null,
+  };
   return {
     id, listingId, requirementId: null, buyerId, sellerId, status,
     offers: [{ id: `${id}-o1`, byCompanyId: buyerId, quantityKg: qty, pricePerKg: price, note: "", createdAt: day(0) }],
-    messages: [], history, createdAt: day(0), updatedAt: history[history.length - 1].at,
+    messages: [], history, payment, createdAt: day(0), updatedAt: history[history.length - 1].at,
   };
 }
 

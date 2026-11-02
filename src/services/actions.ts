@@ -1,7 +1,8 @@
 import { AVAILABILITY, CONTAMINATION_LEVELS, DELIVERY, QUALITY_GRADES, ROLES, UNITS } from "./types";
+import { PAYMENT_METHODS } from "./types";
 import type { AppState, Company, Deal, DealStatus, Listing, Requirement, Result, Role } from "./types";
 import { findCity, findMaterial } from "./catalog";
-import { LIMITS, decimals, isEmail, isPositiveKg, isPrice } from "./validation";
+import { GSTIN_PATTERN, LIMITS, decimals, isEmail, isPositiveKg, isPrice } from "./validation";
 
 // Pure state transitions. The provider supplies IDs and timestamps so these stay
 // deterministic and testable; it also persists the returned state.
@@ -267,7 +268,25 @@ export function rejectDeal(state: AppState, dealId: string, ctx: Ctx): Result<Ap
 export function cancelDeal(state: AppState, dealId: string, ctx: Ctx): Result<AppState> {
   return withDeal(state, dealId, (deal, me) => {
     if (deal.status !== "requested" && deal.status !== "negotiating" && deal.status !== "accepted") return "This exchange can no longer be cancelled.";
-    return transition(deal, "cancelled", me, ctx.now);
+    const refunded = deal.payment?.status === "held_in_escrow" ? { ...deal, payment: { ...deal.payment, status: "refunded" as const, settledAt: ctx.now } } : deal;
+    return transition(refunded, "cancelled", me, ctx.now);
+  });
+}
+
+/**
+ * Prototype escrow payment by the buyer after acceptance. No money moves and no card or bank
+ * details are collected; a real build would create the payment with a provider on the server.
+ */
+export function payForDeal(state: AppState, dealId: string, method: unknown, ctx: Ctx): Result<AppState> {
+  return withDeal(state, dealId, (deal, me) => {
+    if (deal.buyerId !== me) return "Only the buyer pays for an exchange.";
+    if (deal.status !== "accepted") return "Payment opens once terms are accepted.";
+    if (deal.payment) return "This exchange is already paid.";
+    if (!oneOf(PAYMENT_METHODS, method)) return "Choose a payment method.";
+    const last = deal.offers[deal.offers.length - 1];
+    const amountInr = Math.round(last.quantityKg * last.pricePerKg * 100) / 100;
+    const reference = `SYM-PAY-${ctx.newId().replace(/\W/g, "").slice(0, 10).toUpperCase()}`;
+    return { ...deal, payment: { reference, method, amountInr, status: "held_in_escrow", paidAt: ctx.now, settledAt: null }, updatedAt: ctx.now };
   });
 }
 
@@ -275,6 +294,7 @@ export function markDispatched(state: AppState, dealId: string, ctx: Ctx): Resul
   return withDeal(state, dealId, (deal, me) => {
     if (deal.status !== "accepted") return "Only accepted exchanges can be dispatched.";
     if (deal.sellerId !== me) return "Only the seller marks material as dispatched.";
+    if (deal.payment?.status !== "held_in_escrow") return "Wait for the buyer's payment to reach escrow before dispatching.";
     return transition(deal, "in_transit", me, ctx.now);
   });
 }
@@ -283,8 +303,38 @@ export function markReceived(state: AppState, dealId: string, ctx: Ctx): Result<
   return withDeal(state, dealId, (deal, me) => {
     if (deal.status !== "in_transit") return "Only dispatched exchanges can be marked received.";
     if (deal.buyerId !== me) return "Only the buyer confirms receipt.";
-    return transition(deal, "completed", me, ctx.now);
+    const released = deal.payment?.status === "held_in_escrow" ? { ...deal, payment: { ...deal.payment, status: "released" as const, settledAt: ctx.now } } : deal;
+    return transition(released, "completed", me, ctx.now);
   });
+}
+
+// ---------- Verification (prototype review) and notifications ----------
+
+export function submitVerification(state: AppState, input: { gstin: unknown; documentName: unknown }, ctx: Ctx): Result<AppState> {
+  const me = sessionCompany(state);
+  if (!me) return fail("Sign in first.");
+  if (me.verified) return fail("Your company is already verified.");
+  if (me.verification?.status === "pending") return fail("A verification request is already under review.");
+  const gstin = text(input.gstin).toUpperCase();
+  if (!GSTIN_PATTERN.test(gstin)) return fail("Enter a valid 15-character GSTIN, e.g. 03ABCDE1234F1Z5.");
+  const documentName = text(input.documentName);
+  if (!documentName || documentName.length > 200) return fail("Attach your GST certificate or registration document.");
+  const updated: Company = { ...me, verification: { status: "pending", gstin, documentName, submittedAt: ctx.now, reviewedAt: null } };
+  return { ok: true, value: { ...state, companies: state.companies.map((c) => (c.id === me.id ? updated : c)) } };
+}
+
+/** Prototype stand-in for the SYMBIO team's document review. */
+export function simulateVerificationReview(state: AppState, decision: "verified" | "rejected", ctx: Ctx): Result<AppState> {
+  const me = sessionCompany(state);
+  if (!me || me.verification?.status !== "pending") return fail("No pending verification request.");
+  const updated: Company = { ...me, verified: decision === "verified", verification: { ...me.verification, status: decision, reviewedAt: ctx.now } };
+  return { ok: true, value: { ...state, companies: state.companies.map((c) => (c.id === me.id ? updated : c)) } };
+}
+
+export function markNotificationsSeen(state: AppState, ctx: Ctx): Result<AppState> {
+  const me = state.session?.companyId;
+  if (!me) return fail("Sign in first.");
+  return { ok: true, value: { ...state, notificationsSeenAt: { ...(state.notificationsSeenAt ?? {}), [me]: ctx.now } } };
 }
 
 export function sendMessage(state: AppState, dealId: string, body: unknown, ctx: Ctx): Result<AppState> {

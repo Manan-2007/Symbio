@@ -1,5 +1,5 @@
 import {
-  AVAILABILITY, CONTAMINATION_LEVELS, DEAL_STATUSES, DELIVERY, QUALITY_GRADES, ROLES, UNITS,
+  AVAILABILITY, CONTAMINATION_LEVELS, DEAL_STATUSES, DELIVERY, PAYMENT_METHODS, QUALITY_GRADES, ROLES, UNITS,
 } from "./types";
 import type { AppState, Company, Deal, Listing, Requirement } from "./types";
 import { findCity, findMaterial } from "./catalog";
@@ -29,6 +29,9 @@ export const isPrice = (v: unknown): v is number => finite(v) && v >= 0 && v <= 
 export const isEmail = (v: unknown): v is string => typeof v === "string" && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /** Converts a form string to a number, rejecting blanks before conversion. */
+/** Indian GSTIN format: 2-digit state, PAN, entity code, 'Z', checksum character. */
+export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
 export function parseNumber(raw: FormDataEntryValue | string | null | undefined): number {
   const text = typeof raw === "string" ? raw.trim() : "";
   return text === "" ? Number.NaN : Number(text);
@@ -42,7 +45,22 @@ function validCompany(c: unknown): c is Company {
   return isId(v.id) && isStr(v.name, LIMITS.maxName) && (v.name as string).trim() !== "" && isStr(v.industry, LIMITS.maxName) &&
     !!findCity(v.cityId as string) && Array.isArray(v.roles) && v.roles.length > 0 && v.roles.every((r) => oneOf(ROLES, r)) &&
     isStr(v.description) && isStr(v.email, 254) && isStr(v.phone, 40) && typeof v.verified === "boolean" &&
-    finite(v.foundedYear) && Array.isArray(v.reviews) && typeof v.isDemo === "boolean" && isDate(v.createdAt);
+    finite(v.foundedYear) && Array.isArray(v.reviews) && typeof v.isDemo === "boolean" && isDate(v.createdAt) &&
+    (v.verification === undefined || validVerification(v.verification));
+}
+
+function validVerification(raw: unknown): boolean {
+  if (typeof raw !== "object" || raw === null) return false;
+  const v = raw as Record<string, unknown>;
+  return oneOf(["pending", "verified", "rejected"] as const, v.status) && typeof v.gstin === "string" && GSTIN_PATTERN.test(v.gstin) &&
+    isStr(v.documentName, 200) && isDate(v.submittedAt) && (v.reviewedAt === null || isDate(v.reviewedAt));
+}
+
+function validPayment(raw: unknown): boolean {
+  if (typeof raw !== "object" || raw === null) return false;
+  const v = raw as Record<string, unknown>;
+  return isStr(v.reference, 40) && oneOf(PAYMENT_METHODS, v.method) && finite(v.amountInr) && v.amountInr >= 0 &&
+    oneOf(["held_in_escrow", "released", "refunded"] as const, v.status) && isDate(v.paidAt) && (v.settledAt === null || isDate(v.settledAt));
 }
 
 function validListing(l: unknown, companyIds: Set<string>): l is Listing {
@@ -77,7 +95,8 @@ function validDeal(d: unknown, companyIds: Set<string>, listings: Map<string, Li
   return Array.isArray(v.offers) && v.offers.length > 0 && v.offers.every((o: Record<string, unknown>) =>
       isId(o?.id) && parties.has(o.byCompanyId) && isPositiveKg(o.quantityKg) && isPrice(o.pricePerKg) && isStr(o.note) && isDate(o.createdAt)) &&
     Array.isArray(v.messages) && v.messages.every((m: Record<string, unknown>) => isId(m?.id) && parties.has(m.companyId) && isStr(m.text) && isDate(m.createdAt)) &&
-    Array.isArray(v.history) && v.history.every((h: Record<string, unknown>) => oneOf(DEAL_STATUSES, h?.status) && parties.has(h.byCompanyId) && isDate(h.at));
+    Array.isArray(v.history) && v.history.every((h: Record<string, unknown>) => oneOf(DEAL_STATUSES, h?.status) && parties.has(h.byCompanyId) && isDate(h.at)) &&
+    (v.payment === undefined || validPayment(v.payment));
 }
 
 export function validateAppState(raw: unknown): AppState | null {
@@ -116,6 +135,12 @@ export function validateAppState(raw: unknown): AppState | null {
   if (typeof saved !== "object" || saved === null || Array.isArray(saved)) return null;
   for (const [companyId, ids] of Object.entries(saved)) {
     if (!companyIds.has(companyId) || !Array.isArray(ids) || !ids.every((id) => listingMap.has(id))) return null;
+  }
+
+  const seen = v.notificationsSeenAt;
+  if (seen !== undefined) {
+    if (typeof seen !== "object" || seen === null || Array.isArray(seen)) return null;
+    for (const [companyId, at] of Object.entries(seen)) if (!companyIds.has(companyId) || !isDate(at)) return null;
   }
 
   return raw as AppState;
