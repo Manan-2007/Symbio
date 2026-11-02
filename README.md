@@ -42,6 +42,7 @@ pnpm check:foundation   # original 3-hour prototype (/prototype)
 | Requirements | Material, quantity, budget, location + radius, minimum quality, contamination and moisture limits, delivery preference, notes |
 | Smart matching | `Score = M×0.40 + Q×0.25 + D×0.25 + P×0.10`; hard rejection of incompatible material, low quality, excess contamination/moisture, out-of-radius and self-matches; explanations; "filtered out" reasons; both directions |
 | Negotiation | Purchase requests, counter-offers on quantity and price, accept/decline/withdraw, seller dispatch, buyer receipt, messaging, status tracker |
+| Barter estimator | Upcycling Yield & MVE barter analysis (gpt-4o): subtractive/additive classification, yield formula with variables and scalable baseline, Do / Vo / Pc valuation with a computed balance check, what Industry B returns, 2–3 risks with mitigations; pre-filled from any match |
 | Map | Geoapify map tiles, place search, nearby companies by radius and role, driving route with road distance and time |
 | Impact | Reused kg, CO₂e from material-specific illustrative factors, landfill diverted, exchanges, monthly charts, category share, company table, methodology |
 | Profiles & history | Company profile with verification, listings, reviews and trust score; transaction table with filters and CSV export |
@@ -51,7 +52,7 @@ pnpm check:foundation   # original 3-hour prototype (/prototype)
 
 | Service | Used for | Status | Where |
 |---|---|---|---|
-| Azure OpenAI (gpt-4o) | Symbio Assistant answers; photo classification in the Waste classifier | Live | `src/server/azure-openai.ts`, `src/app/api/ai/*` |
+| Azure OpenAI (gpt-4o) | Symbio Assistant answers; photo classification; Upcycling & Barter estimator | Live | `src/server/azure-openai.ts`, `src/app/api/ai/*` |
 | Geoapify | Map tiles, driving routes and road distance, place search on the Map page | Live | `src/server/geoapify.ts`, `src/app/api/geo/*` |
 | Supabase | Contact form storage now; accounts and shared data next | Connected; **schema not yet applied** | `src/services/supabase.ts`, `supabase/schema.sql` |
 
@@ -67,7 +68,7 @@ All secret keys stay server-side in route handlers. **Integrations** in the app 
 
 1. **Create the Supabase tables (required for the contact form).** Supabase Dashboard → SQL Editor → paste [`supabase/schema.sql`](supabase/schema.sql) → Run. Then reload **Integrations**: Supabase should show *Working*.
 2. **Rotate the shared keys.** The Azure OpenAI and Geoapify keys were shared in chat; regenerate them in the Azure portal / Geoapify dashboard and update `.env.local`.
-3. **Restrict keys.** Geoapify dashboard → API key → allowed origins/IPs; Azure → network rules if deployed.
+3. **Restrict keys.** The Geoapify key is used only by SYMBIO's server, so do **not** add an HTTP-referrer (origin) restriction: server requests send no referrer and would be blocked. Once deployed, add your server's outbound IP in Geoapify → API key settings, and set a daily request quota. For Azure OpenAI, use the resource's networking rules to allow only your server once deployed.
 4. **Deploying (e.g. Vercel):** add every variable from `.env.local` in the project settings. The app needs a Node server (API routes), not a static export.
 5. **Move marketplace data to Supabase (next iteration).** Replace `src/services/storageService.ts` with Supabase reads/writes, switch demo login to Supabase Auth (`getSupabase().auth.signUp/signInWithPassword`), create a company + membership on signup, and upload listing photos to the `listing-images` bucket. The schema and RLS policies are ready.
 6. **Real payments.** Use a payment gateway with escrow/route support on the server; record results in the `payments` table from a webhook using `SUPABASE_SECRET_KEY` (server-only).
