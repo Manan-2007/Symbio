@@ -44,7 +44,7 @@ function validCompany(c: unknown): c is Company {
   if (typeof c !== "object" || c === null) return false;
   const v = c as Record<string, unknown>;
   return isId(v.id) && isStr(v.name, LIMITS.maxName) && (v.name as string).trim() !== "" && isStr(v.industry, LIMITS.maxName) &&
-    !!findCity(v.cityId as string) && Array.isArray(v.roles) && v.roles.length > 0 && v.roles.every((r) => oneOf(ROLES, r)) &&
+    !!findCity(v.cityId as string, v.location) && Array.isArray(v.roles) && v.roles.length > 0 && v.roles.every((r) => oneOf(ROLES, r)) &&
     isStr(v.description) && isStr(v.email, 254) && isStr(v.phone, 40) && typeof v.verified === "boolean" &&
     finite(v.foundedYear) && Array.isArray(v.reviews) && typeof v.isDemo === "boolean" && isDate(v.createdAt) &&
     (v.verification === undefined || validVerification(v.verification));
@@ -69,7 +69,7 @@ function validListing(l: unknown, companyIds: Set<string>): l is Listing {
   const v = l as Record<string, unknown>;
   return isId(v.id) && companyIds.has(v.companyId as string) && !!findMaterial(v.materialId as string) &&
     isStr(v.title, LIMITS.maxName) && isStr(v.description) && isPositiveKg(v.quantity) && oneOf(UNITS, v.unit) &&
-    isPositiveKg(v.quantityKg) && isPrice(v.pricePerKg) && !!findCity(v.cityId as string) && oneOf(QUALITY_GRADES, v.quality) &&
+    isPositiveKg(v.quantityKg) && isPrice(v.pricePerKg) && !!findCity(v.cityId as string, v.location) && oneOf(QUALITY_GRADES, v.quality) &&
     finite(v.moisturePct) && v.moisturePct >= 0 && v.moisturePct <= 100 && oneOf(CONTAMINATION_LEVELS, v.contamination) &&
     oneOf(AVAILABILITY, v.availability) && (v.imageDataUrl === null || (isStr(v.imageDataUrl, LIMITS.maxImageChars) && (v.imageDataUrl as string).startsWith("data:image/"))) &&
     (v.status === "active" || v.status === "closed") && isDate(v.createdAt);
@@ -79,7 +79,7 @@ function validRequirement(r: unknown, companyIds: Set<string>): r is Requirement
   if (typeof r !== "object" || r === null) return false;
   const v = r as Record<string, unknown>;
   return isId(v.id) && companyIds.has(v.companyId as string) && !!findMaterial(v.materialId as string) && isPositiveKg(v.quantityKg) &&
-    isPrice(v.maxBudgetPerKg) && !!findCity(v.cityId as string) && finite(v.maxDistanceKm) && v.maxDistanceKm > 0 && v.maxDistanceKm <= 3000 &&
+    isPrice(v.maxBudgetPerKg) && !!findCity(v.cityId as string, v.location) && finite(v.maxDistanceKm) && v.maxDistanceKm > 0 && v.maxDistanceKm <= 3000 &&
     oneOf(QUALITY_GRADES, v.minQuality) && oneOf(CONTAMINATION_LEVELS, v.maxContamination) &&
     (v.maxMoisturePct === null || (finite(v.maxMoisturePct) && v.maxMoisturePct >= 0 && v.maxMoisturePct <= 100)) &&
     oneOf(DELIVERY, v.delivery) && isStr(v.notes) && (v.status === "open" || v.status === "closed") && isDate(v.createdAt);

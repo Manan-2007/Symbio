@@ -207,12 +207,12 @@ export function HomePage() {
                 <div className="rounded-2xl border border-line bg-white p-4">
                   <p className="text-[11px] font-bold tracking-[0.12em] text-muted uppercase">Supplier</p>
                   <p className="mt-1 font-semibold">Green Furniture Ltd.</p>
-                  <p className="text-[13px] text-muted">Sawdust · 500 kg · ₹4/kg · {cityName(sample.listing.cityId)}</p>
+                  <p className="text-[13px] text-muted">Sawdust · 500 kg · ₹4/kg · {cityName(sample.listing.cityId, sample.listing.location)}</p>
                 </div>
                 <div className="rounded-2xl border border-line bg-white p-4">
                   <p className="text-[11px] font-bold tracking-[0.12em] text-muted uppercase">Buyer</p>
                   <p className="mt-1 font-semibold">FreshGrow Mushroom Farm</p>
-                  <p className="text-[13px] text-muted">Needs 400 kg · budget ₹5/kg · {cityName(sample.requirement.cityId)}</p>
+                  <p className="text-[13px] text-muted">Needs 400 kg · budget ₹5/kg · {cityName(sample.requirement.cityId, sample.requirement.location)}</p>
                 </div>
               </div>
             </div>

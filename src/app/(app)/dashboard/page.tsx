@@ -53,7 +53,7 @@ function Dashboard() {
         <StatCard accent label="Estimated CO₂e avoided" value={stats.co2eKg} format={(n) => `${fmtNumber(n)} kg`} icon={<Leaf className="size-[18px]" />} hint="Illustrative factors, not certified" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <ChartCard title="Monthly exchanges" subtitle="Kilograms reused through completed exchanges, last 6 months">
           {stats.records.length ? <MonthlyBars data={monthly} /> : <EmptyState icon={<Recycle className="size-5" />} title="No completed exchanges yet">Completed exchanges will chart here month by month.</EmptyState>}
         </ChartCard>
@@ -62,7 +62,7 @@ function Dashboard() {
         </ChartCard>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <ChartCard title="Recommended matches" subtitle="Highest-scoring opportunities involving your listings or requirements" action={<ButtonLink href="/matches" size="sm" variant="ghost" iconRight={<ArrowRight className="size-3.5" />}>All matches</ButtonLink>}>
           {recommended.length ? (
             <div className="space-y-3">

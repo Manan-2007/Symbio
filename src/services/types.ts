@@ -65,6 +65,8 @@ export type Company = {
   name: string;
   industry: string;
   cityId: string;
+  /** Selected place and coordinates; absent on legacy seeded records. */
+  location?: City;
   roles: Role[];
   description: string;
   email: string;
@@ -88,6 +90,8 @@ export type Listing = {
   quantityKg: number;
   pricePerKg: number; // INR
   cityId: string;
+  /** Selected place and coordinates; absent on legacy seeded records. */
+  location?: City;
   quality: QualityGrade;
   moisturePct: number;
   contamination: Contamination;
@@ -104,6 +108,8 @@ export type Requirement = {
   quantityKg: number;
   maxBudgetPerKg: number;
   cityId: string;
+  /** Selected place and coordinates; absent on legacy seeded records. */
+  location?: City;
   maxDistanceKm: number;
   minQuality: QualityGrade;
   maxContamination: Contamination;

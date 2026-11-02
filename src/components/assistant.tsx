@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -14,7 +15,7 @@ import { cx } from "@/utils/format";
 
 type Turn = { id: number; role: "user" | "assistant"; text: string; materialIds?: string[]; source?: "catalogue" | "service" };
 
-export function SymbioAssistant() {
+export function SymbioAssistant({ inline = false }: { inline?: boolean }) {
   const { state } = useApp();
   const status = useIntegrationStatus();
   const connected = status?.azureOpenAI.configured ?? false;
@@ -46,8 +47,8 @@ export function SymbioAssistant() {
     // Compact, fictional marketplace snapshot so answers can point at real demo listings.
     const name = (id: string) => state.companies.find((c) => c.id === id)?.name ?? "company";
     const context = [
-      ...state.listings.filter((l) => l.status === "active").slice(0, 25).map((l) => `Listing: ${materialName(l.materialId)}, ${l.quantityKg} kg, ₹${l.pricePerKg}/kg, ${cityName(l.cityId)}, by ${name(l.companyId)}`),
-      ...state.requirements.filter((r) => r.status === "open").slice(0, 15).map((r) => `Open buyer requirement (see Smart matches): ${materialName(r.materialId)}, ${r.quantityKg} kg, budget ₹${r.maxBudgetPerKg}/kg, near ${cityName(r.cityId)}, by ${name(r.companyId)}`),
+      ...state.listings.filter((l) => l.status === "active").slice(0, 25).map((l) => `Listing: ${materialName(l.materialId)}, ${l.quantityKg} kg, ₹${l.pricePerKg}/kg, ${cityName(l.cityId, l.location)}, by ${name(l.companyId)}`),
+      ...state.requirements.filter((r) => r.status === "open").slice(0, 15).map((r) => `Open buyer requirement (see Smart matches): ${materialName(r.materialId)}, ${r.quantityKg} kg, budget ₹${r.maxBudgetPerKg}/kg, near ${cityName(r.cityId, r.location)}, by ${name(r.companyId)}`),
     ].join("\n");
     const reply = await askAssistant(q, context);
     setTurns((t) => [...t, { id: nextId.current++, role: "assistant", text: reply.text, materialIds: reply.materialIds, source: reply.source }]);
@@ -61,7 +62,7 @@ export function SymbioAssistant() {
 
   return (
     <>
-      <AnimatePresence>
+      {open && createPortal(<AnimatePresence>
         {open && (
           <motion.section
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -69,7 +70,7 @@ export function SymbioAssistant() {
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ duration: 0.2 }}
             aria-label="SYMBIO assistant"
-            className="fixed right-4 bottom-24 z-50 flex h-[min(560px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-panel border border-line bg-ivory shadow-lift"
+            className="fixed right-4 bottom-20 z-[60] flex h-[min(560px,calc(100vh-8rem))] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-panel border border-line bg-ivory shadow-lift"
           >
             <header className="flex items-center gap-3 bg-forest px-5 py-4 text-white">
               <div className="grid size-9 place-items-center rounded-full bg-white/10"><Sparkles className="size-[18px] text-sage" /></div>
@@ -120,13 +121,13 @@ export function SymbioAssistant() {
             </form>
           </motion.section>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
       <button
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-label={open ? "Close Symbio assistant" : "Open Symbio assistant"}
-        className="focus-ring fixed right-4 bottom-5 z-50 flex items-center gap-2 rounded-full bg-forest py-3 pr-5 pl-4 text-sm font-semibold text-white shadow-lift transition-transform hover:-translate-y-0.5"
+        className={cx("focus-ring flex items-center justify-center gap-2 rounded-full bg-forest py-3 pr-5 pl-4 text-sm font-semibold text-white shadow-lift transition-transform hover:-translate-y-0.5", inline ? "relative shrink-0" : "fixed right-4 bottom-5 z-50")}
       >
         {open ? <X className="size-5" /> : <Bot className="size-5" />}
         <span className="hidden sm:inline">{open ? "Close" : "Ask Symbio"}</span>

@@ -60,8 +60,8 @@ export function evaluate(listing: Listing, requirement: Requirement): Match | Re
   if (contaminationRank(listing.contamination) > contaminationRank(requirement.maxContamination)) return reject(`Contamination (${listing.contamination}) exceeds the buyer's limit (${requirement.maxContamination}).`);
   if (requirement.maxMoisturePct !== null && listing.moisturePct > requirement.maxMoisturePct) return reject(`Moisture ${listing.moisturePct}% exceeds the ${requirement.maxMoisturePct}% limit.`);
 
-  const from = findCity(listing.cityId);
-  const to = findCity(requirement.cityId);
+  const from = findCity(listing.cityId, listing.location);
+  const to = findCity(requirement.cityId, requirement.location);
   if (!from || !to) return reject("Unknown location.");
   const distanceKm = haversineKm(from, to);
   if (distanceKm > requirement.maxDistanceKm) return reject(`About ${Math.round(distanceKm)} km away, beyond the ${requirement.maxDistanceKm} km radius.`);
@@ -82,7 +82,7 @@ export function evaluate(listing: Listing, requirement: Requirement): Match | Re
   const reasons = [
     material === 1 ? `Exact material match: ${supplied}` : `${supplied} is an accepted substitute (${Math.round(material * 100)}% compatible)`,
     breakdown.quantity >= 1 ? `Covers the full ${requirement.quantityKg.toLocaleString("en-IN")} kg requirement` : `Covers ${Math.round(breakdown.quantity * 100)}% of the requirement`,
-    `About ${distanceKm.toFixed(1)} km from ${cityName(requirement.cityId)} (straight-line)`,
+    `About ${distanceKm.toFixed(1)} km from ${cityName(requirement.cityId, requirement.location)} (straight-line)`,
     breakdown.price === 1 ? `₹${listing.pricePerKg}/kg is within the ₹${requirement.maxBudgetPerKg}/kg budget` : `₹${listing.pricePerKg}/kg is above the ₹${requirement.maxBudgetPerKg}/kg budget`,
     `Quality ${listing.quality} and ${listing.contamination} contamination meet the specification`,
   ];

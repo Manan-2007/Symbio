@@ -1,5 +1,7 @@
 "use client";
 
+import { LocationPicker } from "@/components/location-picker";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -7,11 +9,11 @@ import type { FormEvent } from "react";
 import { ArrowRight } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { useToast } from "@/components/ui/toast";
-import { ChoiceGroup, SelectField, TextField } from "@/components/ui/field";
+import { ChoiceGroup, TextField } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/primitives";
-import { CITIES } from "@/services/catalog";
-import type { Role } from "@/services/types";
+
+import type { City, Role } from "@/services/types";
 
 const ROLE_OPTIONS = [
   { value: "generator", label: "Waste Generator" },
@@ -24,6 +26,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [role, setRole] = useState<(typeof ROLE_OPTIONS)[number]["value"]>("generator");
+  const [location, setLocation] = useState<City | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -33,7 +36,7 @@ export default function RegisterPage() {
     const roles: Role[] = role === "both" ? ["generator", "consumer"] : [role];
     const r = await register({
       companyName: data.get("companyName"), email: data.get("email"), password: data.get("password"), industry: data.get("industry"),
-      cityId: data.get("cityId"), phone: data.get("phone"), roles,
+      cityId: location?.id, location: location ?? undefined, phone: data.get("phone"), roles,
     });
     if (!r.ok) return setError(r.error);
     toast("success", "Company account created", "Now complete your profile.");
@@ -53,10 +56,7 @@ export default function RegisterPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField name="industry" label="Industry" placeholder="e.g. Furniture" required maxLength={120} />
-          <SelectField name="cityId" label="Location" defaultValue="" required>
-            <option value="" disabled>Choose a city</option>
-            {CITIES.map((c) => <option key={c.id} value={c.id}>{c.name}, {c.state}</option>)}
-          </SelectField>
+          <LocationPicker label="Location" value={location} onChange={setLocation} />
         </div>
         <TextField name="phone" type="tel" label="Contact number" autoComplete="tel" placeholder="+91 98765 43210" required />
         <ChoiceGroup label="Account role" name="role" value={role} options={ROLE_OPTIONS} onChange={setRole} />

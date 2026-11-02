@@ -12,8 +12,8 @@ const tooltipStyle = { borderRadius: 12, border: "1px solid #e3dfd1", boxShadow:
 
 export function ChartCard({ title, subtitle, children, action, className }: { title: string; subtitle?: ReactNode; children: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <Card className={`p-6 ${className ?? ""}`}>
-      <div className="mb-5 flex items-start justify-between gap-3">
+    <Card className={`relative isolate min-w-0 p-6 ${className ?? ""}`}>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-[24px] leading-tight text-forest-950">{title}</h2>
           {subtitle && <p className="mt-1 text-[13px] text-muted">{subtitle}</p>}
@@ -29,8 +29,8 @@ export function ChartCard({ title, subtitle, children, action, className }: { ti
 export function MonthlyBars({ data, dataKey = "kg", unit = "kg" }: { data: { month: string; [k: string]: number | string }[]; dataKey?: string; unit?: string }) {
   const summary = data.map((d) => `${d.month}: ${fmtNumber(Number(d[dataKey]))} ${unit}`).join(", ");
   return (
-    <figure>
-      <div className="h-64" aria-hidden>
+    <figure className="relative isolate min-w-0 overflow-hidden">
+      <div className="h-64 min-w-0" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="#ece8dc" />
@@ -49,8 +49,8 @@ export function MonthlyBars({ data, dataKey = "kg", unit = "kg" }: { data: { mon
 export function TrendArea({ data, dataKey, unit }: { data: { month: string; [k: string]: number | string }[]; dataKey: string; unit: string }) {
   const summary = data.map((d) => `${d.month}: ${fmtNumber(Number(d[dataKey]))} ${unit}`).join(", ");
   return (
-    <figure>
-      <div className="h-64" aria-hidden>
+    <figure className="relative isolate min-w-0 overflow-hidden">
+      <div className="h-64 min-w-0" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
             <defs>
@@ -76,8 +76,8 @@ export function TrendArea({ data, dataKey, unit }: { data: { month: string; [k: 
 export function Donut({ data, unit = "kg" }: { data: { label: string; value: number }[]; unit?: string }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   return (
-    <div className="grid items-center gap-5 sm:grid-cols-[180px_1fr]">
-      <div className="relative mx-auto size-[180px]" aria-hidden>
+    <div className="flex min-w-0 flex-wrap items-center justify-center gap-5">
+      <div className="relative isolate mx-auto size-[180px] shrink-0" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="label" innerRadius={58} outerRadius={84} paddingAngle={2} stroke="none">
@@ -90,10 +90,10 @@ export function Donut({ data, unit = "kg" }: { data: { label: string; value: num
           <div><p className="font-display text-[26px] leading-none text-forest-950">{fmtNumber(total)}</p><p className="text-[11px] text-muted">{unit} total</p></div>
         </div>
       </div>
-      <ul className="space-y-2">
+      <ul className="min-w-0 flex-[1_1_160px] space-y-2">
         {data.map((d, i) => (
-          <li key={d.label} className="flex items-center justify-between gap-3 text-[13px]">
-            <span className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />{d.label}</span>
+          <li key={d.label} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-[13px]">
+            <span className="flex min-w-0 items-center gap-2"><span className="size-2.5 shrink-0 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />{d.label}</span>
             <span className="tabular-nums font-semibold">{fmtNumber(d.value)} {unit} <span className="font-normal text-muted">({total ? Math.round((d.value / total) * 100) : 0}%)</span></span>
           </li>
         ))}

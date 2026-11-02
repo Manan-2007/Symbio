@@ -26,7 +26,7 @@ export function parseLatLng(raw: string | null): LatLng | null {
 }
 
 export async function geocode(text: string): Promise<GeocodeHit[]> {
-  const url = `${API}/geocode/search?text=${encodeURIComponent(text)}&filter=countrycode:in&limit=5&format=json&apiKey=${key()}`;
+  const url = `${API}/geocode/search?text=${encodeURIComponent(text)}&limit=5&format=json&apiKey=${key()}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(10_000), next: { revalidate: 86_400 } });
   if (!response.ok) throw new Error(`geoapify_${response.status}`);
   const data = (await response.json()) as { results?: { formatted?: string; lat?: number; lon?: number; city?: string; state?: string }[] };

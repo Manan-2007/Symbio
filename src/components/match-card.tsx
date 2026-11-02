@@ -25,7 +25,7 @@ export function MatchCard({ match, perspective }: { match: Match; perspective: "
             : `Needs ${fmtKg(match.requirement.quantityKg)} ${materialName(match.requirement.materialId).toLowerCase()} · budget ${fmtPricePerKg(match.requirement.maxBudgetPerKg)}`}
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-muted">
-          <span className="inline-flex items-center gap-1"><MapPin className="size-3" aria-hidden />{cityName(perspective === "buyer" ? match.listing.cityId : match.requirement.cityId)} · ~{Math.round(match.distanceKm)} km</span>
+          <span className="inline-flex items-center gap-1"><MapPin className="size-3" aria-hidden />{cityName(perspective === "buyer" ? match.listing.cityId : match.requirement.cityId, perspective === "buyer" ? match.listing.location : match.requirement.location)} · ~{Math.round(match.distanceKm)} km</span>
           {match.breakdown.material < 1 && <Badge tone="gold">Substitute</Badge>}
           {match.cautions.length > 0 && <Badge tone="gold">Negotiate price</Badge>}
         </div>

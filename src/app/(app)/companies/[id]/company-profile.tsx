@@ -57,7 +57,7 @@ export function CompanyProfile() {
             <p className="mt-2 text-[14px] text-muted">{company.description || "No description yet."}</p>
             <ul className="mt-5 space-y-2.5 text-[13.5px]">
               <li className="flex items-center gap-2"><Recycle className="size-4 text-muted" aria-hidden />{company.industry}</li>
-              <li className="flex items-center gap-2"><MapPin className="size-4 text-muted" aria-hidden />{cityName(company.cityId)}</li>
+              <li className="flex items-center gap-2"><MapPin className="size-4 text-muted" aria-hidden />{cityName(company.cityId, company.location)}</li>
               <li className="flex items-center gap-2"><Calendar className="size-4 text-muted" aria-hidden />Founded {company.foundedYear}</li>
               {me && <li className="flex items-center gap-2"><Mail className="size-4 text-muted" aria-hidden />{company.email}</li>}
               {me && <li className="flex items-center gap-2"><Phone className="size-4 text-muted" aria-hidden />{company.phone}</li>}

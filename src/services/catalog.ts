@@ -1,3 +1,4 @@
+import { parseLocation } from "./location";
 import type { Category, City, Contamination, Material, QualityGrade } from "./types";
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
@@ -93,7 +94,11 @@ export function findMaterial(id: string): Material | undefined {
   return MATERIALS.find((m) => m.id === id);
 }
 
-export function findCity(id: string): City | undefined {
+export function findCity(id: string, location?: unknown): City | undefined {
+  if (location !== undefined) {
+    const place = parseLocation(location);
+    return place?.id === id ? place : undefined;
+  }
   return CITIES.find((c) => c.id === id);
 }
 
@@ -101,6 +106,6 @@ export function materialName(id: string): string {
   return findMaterial(id)?.name ?? "Unknown material";
 }
 
-export function cityName(id: string): string {
-  return findCity(id)?.name ?? "Unknown location";
+export function cityName(id: string, location?: unknown): string {
+  return findCity(id, location)?.name ?? "Unknown location";
 }

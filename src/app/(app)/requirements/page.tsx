@@ -1,5 +1,7 @@
 "use client";
 
+import { LocationPicker } from "@/components/location-picker";
+
 import Link from "next/link";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -12,8 +14,8 @@ import { Badge, Card, EmptyState, Notice, PageHeader } from "@/components/ui/pri
 import { ChoiceGroup, SelectField, TextAreaField, TextField } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { CATEGORIES } from "@/services/types";
-import type { Contamination, DeliveryPreference, QualityGrade } from "@/services/types";
-import { CATEGORY_LABELS, CITIES, CONTAMINATION_LABELS, MATERIALS, QUALITY_LABELS, cityName, materialName } from "@/services/catalog";
+import type { City, Contamination, DeliveryPreference, QualityGrade } from "@/services/types";
+import { CATEGORY_LABELS, findCity, CONTAMINATION_LABELS, MATERIALS, QUALITY_LABELS, cityName, materialName } from "@/services/catalog";
 import { matchesForRequirement } from "@/services/matchingEngine";
 import { parseNumber } from "@/services/validation";
 import { fmtDate, fmtKg, fmtPricePerKg } from "@/utils/format";
@@ -25,6 +27,7 @@ function RequirementForm({ onDone }: { onDone: () => void }) {
   const { toast } = useToast();
   const [delivery, setDelivery] = useState<DeliveryPreference>("either");
   const [minQuality, setMinQuality] = useState<QualityGrade>("B");
+  const [location, setLocation] = useState<City | null>(me ? findCity(me.cityId, me.location) ?? null : null);
   const [error, setError] = useState<string | null>(null);
 
   function submit(e: FormEvent<HTMLFormElement>) {
@@ -33,7 +36,7 @@ function RequirementForm({ onDone }: { onDone: () => void }) {
     const moistureRaw = String(d.get("moisture") ?? "").trim();
     const r = addRequirement({
       materialId: d.get("materialId"), quantityKg: parseNumber(d.get("quantity")), maxBudgetPerKg: parseNumber(d.get("budget")),
-      cityId: d.get("cityId"), maxDistanceKm: parseNumber(d.get("radius")), minQuality, maxContamination: d.get("contamination"),
+      cityId: location?.id, location: location ?? undefined, maxDistanceKm: parseNumber(d.get("radius")), minQuality, maxContamination: d.get("contamination"),
       maxMoisturePct: moistureRaw === "" ? null : Number(moistureRaw), delivery, notes: d.get("notes"),
     });
     if (!r.ok) return setError(r.error);
@@ -55,9 +58,7 @@ function RequirementForm({ onDone }: { onDone: () => void }) {
         <TextField name="budget" label="Maximum budget (₹/kg)" type="number" inputMode="decimal" min={0} step="0.01" required />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <SelectField name="cityId" label="Preferred location" defaultValue={me?.cityId}>
-          {CITIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </SelectField>
+        <LocationPicker label="Preferred location" value={location} onChange={setLocation} />
         <TextField name="radius" label="Search radius (km)" type="number" inputMode="numeric" min={1} max={3000} defaultValue="150" hint="Straight-line distance" />
       </div>
       <ChoiceGroup label="Minimum quality" name="minQuality" value={minQuality} options={(["A", "B", "C"] as const).map((q) => ({ value: q, label: `Grade ${q}` }))} onChange={setMinQuality} />
@@ -121,7 +122,7 @@ function Requirements() {
                   <div className="rounded-xl bg-mist p-3"><dt className="text-muted">Contamination</dt><dd className="font-semibold">≤ {CONTAMINATION_LABELS[r.maxContamination]}</dd></div>
                 </dl>
                 <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted">
-                  <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" aria-hidden />{cityName(r.cityId)} · {r.maxDistanceKm} km radius</span>
+                  <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" aria-hidden />{cityName(r.cityId, r.location)} · {r.maxDistanceKm} km radius</span>
                   <span className="inline-flex items-center gap-1"><Truck className="size-3.5" aria-hidden />{DELIVERY_LABELS[r.delivery]}</span>
                   {r.maxMoisturePct !== null && <span>Moisture ≤ {r.maxMoisturePct}%</span>}
                 </p>

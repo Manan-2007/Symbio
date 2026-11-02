@@ -228,4 +228,47 @@ assert.equal(await pw.verifyPassword("long-enough", H), true);
 assert.notEqual(creds.hash, "long-enough");
 n++;
 
+// Custom locations must survive every domain boundary without a catalogue entry.
+const places = load("location");
+const catalog = load("catalog");
+const bengaluru = places.locationFromGeocode({ label: "Bengaluru, Karnataka, India", state: "Karnataka", lat: 12.9716, lng: 77.5946 });
+const nearbyBengaluru = places.locationFromGeocode({ label: "Whitefield, Bengaluru, India", state: "Karnataka", lat: 12.9698, lng: 77.75 });
+check("custom locations work in registration, profiles, listings, requirements and persisted state", () => {
+  const registration = actions.register(seed, { companyName: "Bengaluru Materials", email: "bengaluru@example.test", password: "long-enough", industry: "Furniture", cityId: bengaluru.id, location: bengaluru, phone: "+91 98765 43210", roles: ["generator", "consumer"], ...H }, ctx());
+  assert.ok(registration.ok);
+  let s = registration.value;
+  assert.equal(catalog.cityName(bengaluru.id, s.companies.at(-1).location), bengaluru.name);
+  const profile = actions.updateProfile(s, { name: "Bengaluru Materials", industry: "Furniture", cityId: nearbyBengaluru.id, location: nearbyBengaluru, phone: "+91 98765 43210", description: "Custom location company", roles: ["generator", "consumer"], foundedYear: 2020 });
+  assert.ok(profile.ok);
+  s = profile.value;
+  const listing = actions.addListing(s, { materialId: "sawdust", title: "Clean sawdust", description: "Untreated", quantity: 500, unit: "kg", pricePerKg: 4, cityId: bengaluru.id, location: bengaluru, quality: "A", moisturePct: 10, contamination: "none", availability: "weekly", imageDataUrl: null }, ctx());
+  assert.ok(listing.ok);
+  const requirement = actions.addRequirement(listing.value.state, { materialId: "sawdust", quantityKg: 400, maxBudgetPerKg: 5, cityId: nearbyBengaluru.id, location: nearbyBengaluru, maxDistanceKm: 50, minQuality: "B", maxContamination: "low", maxMoisturePct: 20, delivery: "either", notes: "" }, ctx());
+  assert.ok(requirement.ok);
+  const reloaded = validateAppState(JSON.parse(JSON.stringify(requirement.value.state)));
+  assert.ok(reloaded);
+  assert.deepEqual(reloaded.listings[0].location, bengaluru);
+  assert.deepEqual(reloaded.requirements[0].location, nearbyBengaluru);
+});
+check("custom coordinates determine distance and radius eligibility", () => {
+  const listing = { ...seed.listings[0], cityId: bengaluru.id, location: bengaluru };
+  const requirement = { ...seed.requirements[0], cityId: nearbyBengaluru.id, location: nearbyBengaluru, maxDistanceKm: 50 };
+  const result = engine.evaluate(listing, requirement);
+  assert.ok(engine.isMatch(result));
+  assert.ok(result.distanceKm > 15 && result.distanceKm < 20);
+  assert.equal(engine.isMatch(engine.evaluate(listing, { ...requirement, maxDistanceKm: 5 })), false);
+  assert.ok(result.reasons.some((r) => r.includes("Whitefield")));
+});
+check("malformed, missing and mismatched custom coordinates cannot enter saved state", () => {
+  for (const location of [{ ...bengaluru, lat: 91 }, { ...bengaluru, lng: -181 }, { ...bengaluru, lat: "12" }, { ...bengaluru, lat: NaN }, { ...bengaluru, name: "" }, { ...bengaluru, id: "other" }, null]) {
+    assert.equal(catalog.findCity(bengaluru.id, location), undefined);
+    const s = structuredClone(seed);
+    s.companies[0] = { ...s.companies[0], cityId: bengaluru.id, location };
+    assert.equal(validateAppState(s), null);
+  }
+  assert.equal(catalog.findCity(bengaluru.id), undefined);
+  assert.ok(validateAppState(JSON.parse(JSON.stringify(seed))), "legacy seed data still loads");
+  assert.equal(places.locationFromGeocode({ label: "London", lat: Infinity, lng: 0 }), undefined);
+});
+
 console.log(`platform checks passed (${n})`);

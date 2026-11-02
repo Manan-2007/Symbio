@@ -8,7 +8,7 @@ type Row = { name: string; what: string; ok: boolean | null; configured: boolean
 
 function Icon({ ok, configured }: { ok: boolean | null; configured: boolean | null }) {
   if (ok === null) return <Loader2 className="size-5 animate-spin text-muted" aria-label="Checking" />;
-  if (ok) return <CheckCircle2 className="size-5 text-emerald" aria-label="Working" />;
+  if (ok) return <CheckCircle2 className="size-5 text-emerald" aria-label="Configured" />;
   if (configured) return <CircleDashed className="size-5 text-gold" aria-label="Needs setup" />;
   return <XCircle className="size-5 text-error" aria-label="Not configured" />;
 }
@@ -17,7 +17,7 @@ export default function IntegrationsPage() {
   const status = useIntegrationStatus();
   const rows: Row[] = [
     {
-      name: "Azure OpenAI (gpt-4o)", what: "Symbio Assistant answers and photo classification in the Waste classifier.",
+      name: "Azure OpenAI (gpt-4o)", what: "Symbio Assistant, photo classification and upcycling/barter estimates.",
       ok: status ? status.azureOpenAI.ok : null, configured: status ? status.azureOpenAI.configured : null, detail: status?.azureOpenAI.detail ?? "Checking…",
     },
     {
@@ -28,7 +28,7 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Integrations" title="Connected services" description="Live status of the external services behind SYMBIO. Keys are stored server-side and never shown here." />
+      <PageHeader eyebrow="Integrations" title="Connected services" description="Server configuration for SYMBIO’s external services. Keys are never shown here; availability is checked when you use a feature." />
       <div className="space-y-4">
         {rows.map((r) => (
           <Card key={r.name} className="flex gap-4 p-6">
@@ -36,7 +36,7 @@ export default function IntegrationsPage() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="font-display text-[24px] leading-tight text-forest-950">{r.name}</h2>
-                {r.ok !== null && <Badge tone={r.ok ? "green" : r.configured ? "gold" : "red"}>{r.ok ? "Working" : r.configured ? "Needs setup" : "Not configured"}</Badge>}
+                {r.ok !== null && <Badge tone={r.ok ? "green" : r.configured ? "gold" : "red"}>{r.ok ? "Configured" : r.configured ? "Needs setup" : "Not configured"}</Badge>}
               </div>
               <p className="mt-1 text-[14px] text-muted">{r.what}</p>
               <p className="mt-2 text-[13px]">{r.detail}</p>

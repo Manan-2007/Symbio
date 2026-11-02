@@ -10,7 +10,7 @@ The current platform is a Next.js application with browser-local demo data and o
 4. Deploy. Redeploy after changing environment variables so the deployment receives the new configuration.
 5. Check `/integrations`, then test each configured feature with fictional sample data.
 
-The public demo is [symbio-eight.vercel.app](https://symbio-eight.vercel.app/). During the documentation review on **2 November 2026**, its Integrations page reported both Azure OpenAI and Geoapify as not configured. This is an observation of that deployment, not a limitation of the integration code.
+The public demo is [symbio-eight.vercel.app](https://symbio-eight.vercel.app/). Azure OpenAI and Geoapify variables are set in its Production and Preview environments. `/api/status` confirms variable presence; exercise the individual features to check provider responses.
 
 ## Environment variables
 

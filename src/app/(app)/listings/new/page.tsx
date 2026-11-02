@@ -1,5 +1,7 @@
 "use client";
 
+import { LocationPicker } from "@/components/location-picker";
+
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
@@ -12,8 +14,8 @@ import { Card, EmptyState, Notice, PageHeader } from "@/components/ui/primitives
 import { ChoiceGroup, SelectField, TextAreaField, TextField } from "@/components/ui/field";
 import { MaterialArt } from "@/components/ui/visuals";
 import { CATEGORIES } from "@/services/types";
-import type { Contamination, QualityGrade, Unit } from "@/services/types";
-import { CATEGORY_LABELS, CITIES, CONTAMINATION_LABELS, MATERIALS, QUALITY_LABELS, findMaterial } from "@/services/catalog";
+import type { City, Contamination, QualityGrade, Unit } from "@/services/types";
+import { CATEGORY_LABELS, findCity, CONTAMINATION_LABELS, MATERIALS, QUALITY_LABELS, findMaterial } from "@/services/catalog";
 import { estimateCo2eKg } from "@/services/carbonCalculator";
 import { parseNumber } from "@/services/validation";
 import { resizeImage } from "@/utils/image";
@@ -33,6 +35,7 @@ function AddListingForm() {
   const [price, setPrice] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [imageBusy, setImageBusy] = useState(false);
+  const [location, setLocation] = useState<City | null>(findCity(company.cityId, company.location) ?? null);
   const [error, setError] = useState<string | null>(null);
 
   if (!company.roles.includes("generator")) {
@@ -66,7 +69,7 @@ function AddListingForm() {
     const data = new FormData(e.currentTarget);
     const r = addListing({
       materialId, title: data.get("title"), description: data.get("description"), quantity: parseNumber(quantity), unit,
-      pricePerKg: parseNumber(price), cityId: data.get("cityId"), quality, moisturePct: parseNumber(data.get("moisture")),
+      pricePerKg: parseNumber(price), cityId: location?.id, location: location ?? undefined, quality, moisturePct: parseNumber(data.get("moisture")),
       contamination: data.get("contamination"), availability: data.get("availability"), imageDataUrl: image,
     });
     if (!r.ok) {
@@ -103,9 +106,7 @@ function AddListingForm() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label="Price (₹ per kg)" type="number" inputMode="decimal" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} hint="Enter 0 to offer it free" required />
-            <SelectField name="cityId" label="Location" defaultValue={company.cityId}>
-              {CITIES.map((c) => <option key={c.id} value={c.id}>{c.name}, {c.state}</option>)}
-            </SelectField>
+            <LocationPicker label="Location" value={location} onChange={setLocation} />
           </div>
           <SelectField name="availability" label="Availability" defaultValue="immediate">
             <option value="immediate">Available now</option>

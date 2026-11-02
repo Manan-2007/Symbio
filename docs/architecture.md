@@ -13,10 +13,11 @@ src/app/(app)/            AppShell (sidebar) + Assistant
 src/app/prototype/        original 3-hour prototype (unchanged logic, own storage key)
 
 src/components/app-provider.tsx   single source of truth: hydration, persistence, actions
+src/components/location-picker.tsx   worldwide Geoapify place search and selection
 src/components/ui/                Button, Card/Badge/Notice/EmptyState, fields, Modal/ConfirmDialog, Toast, visuals
 src/components/layout/            Navbar, Footer, AppShell, RequireAuth
 src/services/ (pure TS, no React)
-  types.ts  catalog.ts  demoData.ts  geo.ts  matchingEngine.ts  carbonCalculator.ts
+  types.ts  catalog.ts  demoData.ts  geo.ts  location.ts  matchingEngine.ts  carbonCalculator.ts
   validation.ts  actions.ts  analytics.ts  storageService.ts  password.ts  notifications.ts  ai.ts  barter.ts
 src/server/              azure-openai.ts  geoapify.ts
 src/app/api/             ai/{assistant,classify,barter}  geo/{geocode,route,staticmap}  status
@@ -27,7 +28,7 @@ src/app/api/             ai/{assistant,classify,barter}  geo/{geocode,route,stat
 - **Matching:** `matchingEngine.evaluate()` applies hard gates (material compatibility table, quality, contamination, moisture, radius, ownership), then scores `M×0.40 + Q×0.25 + D×0.25 + P×0.10` and returns reasons and cautions.
 - **Deals:** requested → negotiating (counter-offers) → accepted → simulated buyer payment → in_transit (seller) → completed (buyer); decline/cancel branches. Dispatch requires a held escrow payment. Receipt releases it; cancelling an accepted paid exchange refunds it. Payment state is nested on the deal, not a separate deal status. Only `completed` deals count toward impact. Listing quantities are not decremented or globally reserved.
 - **Carbon:** reused kg × material-specific illustrative factor (`catalog.ts`). Never presented as certified.
-- **Maps:** `map-view.tsx` uses server-proxied Geoapify static maps and driving routes when configured, with a schematic SVG fallback. Place search is proxied through `/api/geo/geocode`. Matching and radius filtering continue to use Haversine distances between approximate city centres, separately from road distances.
+- **Locations and maps:** `LocationPicker` searches places worldwide through `/api/geo/geocode`. Companies, listings and requirements persist selected labels and coordinates; old demo records resolve their seeded city IDs. `map-view.tsx` uses server-proxied Geoapify static maps and driving routes, with a marker-fitted schematic SVG fallback. Matching and radius filtering use Haversine distance between selected coordinates, separately from road distance.
 - **AI:** `ai.ts` calls the app’s `/api/ai/*` routes. The server adapter calls Azure OpenAI for the assistant, vision classifier and upcycling/barter estimator. The classifier validates returned material IDs; barter output is parsed into a typed estimate, with client-side yield scaling and value-balance arithmetic. Missing credentials produce explicit unavailable states; the assistant falls back to labelled catalogue answers.
 - **Integration status:** `/api/status` reports the presence of required environment variables, not provider health or credential validity. Secret keys stay in server modules.
 - **Auxiliary demo state:** the contact form saves to `symbio-contact-v1`; password recovery does not send email; verification stores a GSTIN and document filename with a simulated review. Notifications are derived from local activity, without a delivery backend.

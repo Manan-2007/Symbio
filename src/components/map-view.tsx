@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CITIES } from "@/services/catalog";
 import { haversineKm } from "@/services/geo";
 import type { City } from "@/services/types";
 import { cx } from "@/utils/format";
@@ -14,15 +13,20 @@ const TONES = { self: "#a8834a", generator: "#1e4d36", consumer: "#57a773", both
 const W = 800;
 const H = 560;
 
-// Schematic fallback: equirectangular projection over the demo region with padding.
-const LAT = [Math.min(...CITIES.map((c) => c.lat)) - 0.35, Math.max(...CITIES.map((c) => c.lat)) + 0.35];
-const LNG = [Math.min(...CITIES.map((c) => c.lng)) - 0.45, Math.max(...CITIES.map((c) => c.lng)) + 0.45];
-function project({ lat, lng }: Point) {
-  return { x: ((lng - LNG[0]) / (LNG[1] - LNG[0])) * W, y: H - ((lat - LAT[0]) / (LAT[1] - LAT[0])) * H };
-}
 const key = (p: Point) => `${p.lat.toFixed(3)},${p.lng.toFixed(3)}`;
 
 function SchematicMap({ markers, route }: { markers: MapMarker[]; route?: MapRoute | null }) {
+  const points = [...markers, ...(route ? [route.from, route.to] : [])];
+  const latitudes = points.length ? points.map((p) => p.lat) : [0];
+  const longitudes = points.length ? points.map((p) => p.lng) : [0];
+  const south = Math.min(...latitudes) - 0.1;
+  const north = Math.max(...latitudes) + 0.1;
+  const west = Math.min(...longitudes) - 0.1;
+  const east = Math.max(...longitudes) + 0.1;
+  const project = ({ lat, lng }: Point) => ({
+    x: 70 + ((lng - west) / (east - west)) * (W - 140),
+    y: H - 70 - ((lat - south) / (north - south)) * (H - 140),
+  });
   const groups = new Map<string, MapMarker[]>();
   for (const m of markers) groups.set(key(m), [...(groups.get(key(m)) ?? []), m]);
   const a = route && project(route.from);
@@ -37,10 +41,6 @@ function SchematicMap({ markers, route }: { markers: MapMarker[]; route?: MapRou
       <rect width={W} height={H} fill="#f4f2ea" />
       <path d="M60 40 C 220 10, 420 30, 560 80 C 700 130, 780 260, 760 380 C 740 500, 640 540, 520 530 C 380 520, 260 470, 160 420 C 60 370, 20 260, 30 160 C 36 100, 40 60, 60 40 Z" fill="url(#map-land)" stroke="#cbd9c5" />
       <rect width={W} height={H} fill="url(#map-grid)" opacity="0.5" />
-      {CITIES.map((c) => {
-        const p = project(c);
-        return <text key={c.id} x={p.x} y={p.y + 30} textAnchor="middle" fontSize="13" fill="#5d675f" paintOrder="stroke" stroke="#f4f2ea" strokeWidth="4">{c.name}</text>;
-      })}
       {a && b && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#a8834a" strokeWidth="3" strokeDasharray="8 7" strokeLinecap="round" />}
       {[...groups.values()].map((here) => {
         const p = project(here[0]);
@@ -53,6 +53,7 @@ function SchematicMap({ markers, route }: { markers: MapMarker[]; route?: MapRou
             className={select ? "cursor-pointer outline-none" : undefined}>
             <circle r={here.some((m) => m.selected) ? 22 : 16} fill={TONES[tone]} opacity="0.15" />
             <circle r="9" fill={TONES[tone]} stroke="#fff" strokeWidth="3" />
+            <text y="32" textAnchor="middle" fontSize="12" fill="#163a29">{here[0].label.split(",")[0].slice(0, 28)}</text>
             {here.length > 1 && <g transform="translate(10 -10)"><circle r="8" fill="#fff" stroke="#e3dfd1" /><text textAnchor="middle" y="3.5" fontSize="10" fontWeight="700" fill="#1f2620">{here.length}</text></g>}
           </g>
         );
@@ -134,7 +135,7 @@ export function MapView({ markers, route, className }: { markers: MapMarker[]; r
           {route && routeInfo && routeInfo !== "unavailable"
             ? <><strong className="text-ink">{routeInfo.distanceKm.toFixed(1)} km by road</strong> · ~{Math.round(routeInfo.durationMin)} min drive · {straight!.toFixed(1)} km straight-line</>
             : route ? <>{straight!.toFixed(1)} km straight-line{routeInfo === "unavailable" ? " · road route unavailable" : " · fetching road route…"}</>
-            : live ? "Approximate city-centre locations" : "Schematic map · approximate city centres (live maps unavailable)"}
+            : live ? "Selected locations · demo company coordinates are approximate" : "Schematic map · selected locations (live maps unavailable)"}
         </span>
         <span className="flex gap-3">
           {(["self", "generator", "consumer", "both"] as const).map((t) => (

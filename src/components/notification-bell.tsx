@@ -31,7 +31,7 @@ export function NotificationBell({ align = "right" }: { align?: "left" | "right"
 
   if (!me) return null;
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative z-40">
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="true" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} className="focus-ring relative grid size-10 place-items-center rounded-full border border-line bg-white text-ink hover:border-forest">
         <Bell className="size-[18px]" />
         {unread > 0 && <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-error px-1 text-[10.5px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}

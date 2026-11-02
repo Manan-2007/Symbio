@@ -35,7 +35,7 @@ export function logout(state: AppState): AppState {
 }
 
 export type RegisterInput = {
-  companyName: unknown; email: unknown; password: unknown; industry: unknown; cityId: unknown; phone: unknown; roles: unknown;
+  companyName: unknown; email: unknown; password: unknown; industry: unknown; cityId: unknown; location?: unknown; phone: unknown; roles: unknown;
   /** Computed by the caller from `password` with hashPassword(); the plain password is never stored. */
   salt?: unknown; passwordHash?: unknown;
 };
@@ -51,13 +51,14 @@ export function register(state: AppState, input: RegisterInput, ctx: Ctx): Resul
   if (typeof input.password !== "string" || input.password.length < 8) return fail("Password must be at least 8 characters.");
   if (!isSaltHex(input.salt) || !isHashHex(input.passwordHash)) return fail("Could not secure the password. Try again.");
   if (industry.length < 2 || industry.length > LIMITS.maxName) return fail("Enter your industry.");
-  if (!findCity(input.cityId as string)) return fail("Choose a location.");
+  const location = findCity(input.cityId as string, input.location);
+  if (!location) return fail("Choose a location.");
   if (!/^[+\d][\d\s-]{6,19}$/.test(phone)) return fail("Enter a contact number.");
   if (!Array.isArray(input.roles) || input.roles.length === 0 || !input.roles.every((r) => oneOf(ROLES, r))) return fail("Choose an account role.");
   if (state.companies.length >= LIMITS.maxRecords) return fail("Demo company limit reached.");
 
   const company: Company = {
-    id: ctx.newId(), name, industry, cityId: input.cityId as string, roles: [...new Set(input.roles as Role[])], description: "",
+    id: ctx.newId(), name, industry, cityId: location.id, location, roles: [...new Set(input.roles as Role[])], description: "",
     email, phone, verified: false, foundedYear: new Date(ctx.now).getFullYear(), reviews: [], isDemo: false, createdAt: ctx.now,
   };
   return {
@@ -66,7 +67,7 @@ export function register(state: AppState, input: RegisterInput, ctx: Ctx): Resul
   };
 }
 
-export type ProfileInput = { name: unknown; industry: unknown; cityId: unknown; phone: unknown; description: unknown; roles: unknown; foundedYear: unknown };
+export type ProfileInput = { name: unknown; industry: unknown; cityId: unknown; location?: unknown; phone: unknown; description: unknown; roles: unknown; foundedYear: unknown };
 
 export function updateProfile(state: AppState, input: ProfileInput): Result<AppState> {
   const me = sessionCompany(state);
@@ -78,19 +79,20 @@ export function updateProfile(state: AppState, input: ProfileInput): Result<AppS
   const year = input.foundedYear;
   if (name.length < 2 || name.length > LIMITS.maxName) return fail("Enter your company name.");
   if (industry.length < 2 || industry.length > LIMITS.maxName) return fail("Enter your industry.");
-  if (!findCity(input.cityId as string)) return fail("Choose a location.");
+  const location = findCity(input.cityId as string, input.location);
+  if (!location) return fail("Choose a location.");
   if (!/^[+\d][\d\s-]{6,19}$/.test(phone)) return fail("Enter a contact number.");
   if (description.length > LIMITS.maxText) return fail("Description is too long.");
   if (typeof year !== "number" || !Number.isInteger(year) || year < 1800 || year > new Date().getFullYear()) return fail("Enter a valid founding year.");
   if (!Array.isArray(input.roles) || input.roles.length === 0 || !input.roles.every((r) => oneOf(ROLES, r))) return fail("Choose at least one role.");
-  const updated: Company = { ...me, name, industry, cityId: input.cityId as string, phone, description, foundedYear: year, roles: [...new Set(input.roles as Role[])] };
+  const updated: Company = { ...me, name, industry, cityId: location.id, location, phone, description, foundedYear: year, roles: [...new Set(input.roles as Role[])] };
   return { ok: true, value: { ...state, companies: state.companies.map((c) => (c.id === me.id ? updated : c)) } };
 }
 
 // ---------- Listings and requirements ----------
 
 export type ListingInput = {
-  materialId: unknown; title: unknown; description: unknown; quantity: unknown; unit: unknown; pricePerKg: unknown; cityId: unknown;
+  materialId: unknown; title: unknown; description: unknown; quantity: unknown; unit: unknown; pricePerKg: unknown; cityId: unknown; location?: unknown;
   quality: unknown; moisturePct: unknown; contamination: unknown; availability: unknown; imageDataUrl: unknown;
 };
 
@@ -109,7 +111,8 @@ export function addListing(state: AppState, input: ListingInput, ctx: Ctx): Resu
   const quantityKg = input.unit === "tonne" ? Math.round((input.quantity as number) * 1000 * 1000) / 1000 : (input.quantity as number);
   if (!isPositiveKg(quantityKg)) return fail("Quantity is too large.");
   if (!isPrice(input.pricePerKg)) return fail("Price must be ₹0 or more per kg, with up to 2 decimals. Use 0 for free.");
-  if (!findCity(input.cityId as string)) return fail("Choose a location.");
+  const location = findCity(input.cityId as string, input.location);
+  if (!location) return fail("Choose a location.");
   if (!oneOf(QUALITY_GRADES, input.quality)) return fail("Choose a quality grade.");
   const moisture = input.moisturePct;
   if (typeof moisture !== "number" || !Number.isFinite(moisture) || moisture < 0 || moisture > 100 || !decimals(moisture, 1)) return fail("Moisture must be between 0 and 100%.");
@@ -121,7 +124,7 @@ export function addListing(state: AppState, input: ListingInput, ctx: Ctx): Resu
 
   const listing: Listing = {
     id: ctx.newId(), companyId: me.id, materialId: material.id, title, description, quantity: input.quantity as number, unit: input.unit,
-    quantityKg, pricePerKg: input.pricePerKg as number, cityId: input.cityId as string, quality: input.quality, moisturePct: moisture,
+    quantityKg, pricePerKg: input.pricePerKg as number, cityId: location.id, location, quality: input.quality, moisturePct: moisture,
     contamination: input.contamination, availability: input.availability, imageDataUrl: image as string | null, status: "active", createdAt: ctx.now,
   };
   return { ok: true, value: { state: { ...state, listings: [listing, ...state.listings] }, listing } };
@@ -134,7 +137,7 @@ export function setListingStatus(state: AppState, listingId: string, status: Lis
 }
 
 export type RequirementInput = {
-  materialId: unknown; quantityKg: unknown; maxBudgetPerKg: unknown; cityId: unknown; maxDistanceKm: unknown; minQuality: unknown;
+  materialId: unknown; quantityKg: unknown; maxBudgetPerKg: unknown; cityId: unknown; location?: unknown; maxDistanceKm: unknown; minQuality: unknown;
   maxContamination: unknown; maxMoisturePct: unknown; delivery: unknown; notes: unknown;
 };
 
@@ -145,7 +148,8 @@ export function addRequirement(state: AppState, input: RequirementInput, ctx: Ct
   if (!findMaterial(input.materialId as string)) return fail("Choose the material you need.");
   if (!isPositiveKg(input.quantityKg)) return fail("Quantity must be a positive number of kg.");
   if (!isPrice(input.maxBudgetPerKg)) return fail("Budget must be ₹0 or more per kg.");
-  if (!findCity(input.cityId as string)) return fail("Choose a preferred location.");
+  const location = findCity(input.cityId as string, input.location);
+  if (!location) return fail("Choose a preferred location.");
   const radius = input.maxDistanceKm;
   if (typeof radius !== "number" || !Number.isFinite(radius) || radius < 1 || radius > 3000) return fail("Search radius must be 1–3,000 km.");
   if (!oneOf(QUALITY_GRADES, input.minQuality)) return fail("Choose a minimum quality.");
@@ -159,7 +163,7 @@ export function addRequirement(state: AppState, input: RequirementInput, ctx: Ct
 
   const requirement: Requirement = {
     id: ctx.newId(), companyId: me.id, materialId: input.materialId as string, quantityKg: input.quantityKg as number,
-    maxBudgetPerKg: input.maxBudgetPerKg as number, cityId: input.cityId as string, maxDistanceKm: radius, minQuality: input.minQuality,
+    maxBudgetPerKg: input.maxBudgetPerKg as number, cityId: location.id, location, maxDistanceKm: radius, minQuality: input.minQuality,
     maxContamination: input.maxContamination, maxMoisturePct: moisture as number | null, delivery: input.delivery, notes, status: "open", createdAt: ctx.now,
   };
   return { ok: true, value: { state: { ...state, requirements: [requirement, ...state.requirements] }, requirement } };

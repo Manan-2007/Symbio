@@ -16,7 +16,7 @@ Discover compatible partners. Understand the match. Negotiate the exchange. Meas
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-0f261b?style=flat-square&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0f261b?style=flat-square&logo=tailwindcss)
 
-**7 material categories · 15 catalogue materials · 10 fictional companies · 10 supported cities**
+**7 material categories · 15 catalogue materials · 10 fictional companies · worldwide location search**
 
 [The idea](#the-idea) · [Four standout features](#four-standout-features) · [Screenshots](#screenshots) · [Feature tour](#everything-else-built-around-the-exchange) · [Architecture](#architecture) · [Run locally](#run-locally)
 
@@ -128,14 +128,14 @@ Actual captures of the [deployed application](https://symbio-eight.vercel.app/),
   </tr>
 </table>
 
-> **Public-demo integration status at capture:** Azure OpenAI and Geoapify were both reported as **not configured**. The barter screenshot shows the input workflow, not a generated result. The integration code is implemented; credentials must be configured on the deployment to enable external service calls.
+> **Screenshot context:** These images were captured before the external credentials were configured. The barter screenshot shows the input workflow, not a generated result. The current app uses server-side Azure OpenAI and Geoapify integrations when their environment variables are present.
 
 ## Everything else built around the exchange
 
 | Area | Included capabilities |
 | :--- | :--- |
 | **Landing & discovery** | Illustrated globe, animated statistics, four-step walkthrough, generator/consumer sections, category browsing, a real computed sample match, featured listings and labelled fictional testimonials. |
-| **Company onboarding** | Registration, email/password sign-in, instant demo-company access, generator/consumer/both roles, company profile setup and editable profile details. |
+| **Company onboarding** | Registration, email/password sign-in, instant demo-company access, generator/consumer/both roles, worldwide location search, company profile setup and editable profile details. |
 | **Dashboard** | Active listing mass, recommended matches, open and completed exchanges, estimated CO₂e, monthly exchange charts, category breakdown, activity and shortcuts. |
 | **Marketplace** | Search across materials, companies and locations; seven category filters; location, minimum quantity and maximum price filters; saved listings; newest, price and quantity sorting. |
 | **Listing details** | Material specifications, reuse routes, supplier details, quality grade, moisture, contamination, availability, saved items and contact-seller requests. |
@@ -143,7 +143,7 @@ Actual captures of the [deployed application](https://symbio-eight.vercel.app/),
 | **Buyer requirements** | Required material and quantity, budget, search radius, minimum grade, maximum moisture/contamination, delivery preference, notes and open/closed controls. |
 | **Negotiations** | Purchase requests, counter-offers, quantity/price changes, messages, accept/decline/withdraw actions, status history and buyer/seller-specific workflow checks. |
 | **Simulated escrow** | UPI, net banking, card and NEFT choices; payment reference; held, released and refunded states. No money moves and no payment credentials are collected. |
-| **Nearby companies** | Radius and company-role filtering, schematic fallback map, plus Geoapify place search, static maps, driving distance, travel time and route rendering when configured. |
+| **Nearby companies** | Search any location worldwide, filter companies by radius and role, view a schematic fallback map, and use Geoapify static maps, driving distance, travel time and route rendering. |
 | **Company profiles** | Business information, listings, fictional reviews, trust score and verification badges. GSTIN format checking and simulated review retain only the document filename. |
 | **Notifications** | In-app activity-derived notifications for exchanges, offers, messages, payment events, verification and matching, with read-state tracking. |
 | **Transaction history** | Search and status filters, agreed quantities and amounts, payment references/status, completed value and CSV export. |
@@ -164,7 +164,7 @@ Actual captures of the [deployed application](https://symbio-eight.vercel.app/),
 | 📄 Paper | Cardboard offcuts, paper trimmings | Recycled pulp, void fill, moulded pulp, insulation |
 | 🏗️ Construction | Concrete rubble | Road sub-base, recycled aggregate, fill |
 
-The location catalogue covers Ludhiana, Doraha, Chandigarh, Mohali, Jalandhar, Amritsar, Patiala, Mandi Gobindgarh, Panipat and New Delhi. Catalogue support does not imply that every material or city has an active demo listing.
+The fictional companies are seeded in Ludhiana, Doraha, Chandigarh, Mohali, Jalandhar, Amritsar, Patiala, Mandi Gobindgarh, Panipat and New Delhi. New companies, listings and requirements can use a place selected from worldwide Geoapify search; those coordinates travel with the saved record. A location need not have an active demo listing.
 
 ## From surplus to second life
 
@@ -207,7 +207,7 @@ Score (%) = 100 × (0.40 × M + 0.25 × Q + 0.25 × D + 0.10 × P)
 
 **Worked demo:** Green Furniture offers 500 kg of sawdust at ₹4/kg in Ludhiana. FreshGrow needs 400 kg at up to ₹5/kg in Doraha, with a 195 km radius. At approximately 19.6 km straight-line distance, `M = 1`, `Q = 1`, `D ≈ 0.90`, and `P = 1`, giving **97.5%** after rounding to one decimal.
 
-Ties are resolved by distance, then stable match ID. Radius filtering uses approximate city-centre coordinates and the Haversine formula; Geoapify road distances are separate and do not change the matching score.
+Ties are resolved by distance, then stable match ID. Radius filtering uses the Haversine formula with selected place coordinates; original demo companies use approximate seeded city centres. Geoapify road distances are separate and do not change the matching score.
 
 ### Exchange lifecycle
 
@@ -466,6 +466,7 @@ See the [deployment guide](docs/deployment.md) for the deployment boundary and v
 | Reference | What it contains |
 | :--- | :--- |
 | [Architecture](docs/architecture.md) | Platform internals and the preserved prototype’s design. |
+| [Tech stack](techstack.md) | Framework, libraries, services, data flow and development tools. |
 | [Deployment](docs/deployment.md) | Current hosting and integration setup. |
 | [Requirements history](docs/requirements.md) | Earlier scope and implementation milestones; some integration notes predate the current adapters. |
 | [Verification history](docs/verification.md) | Earlier development checks and browser walkthrough notes. |

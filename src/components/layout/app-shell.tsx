@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { cityName } from "@/services/catalog";
+import { SymbioAssistant } from "@/components/assistant";
 import { NotificationBell } from "@/components/notification-bell";
 import { cx } from "@/utils/format";
 
@@ -60,11 +61,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     cx("focus-ring group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors", active ? "bg-forest text-white" : "text-ink/80 hover:bg-sage-50 hover:text-forest");
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="px-5 pt-6 pb-5">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 px-5 pt-6 pb-5">
         <Link href="/" onClick={onNavigate} className="focus-ring rounded-full" aria-label="SYMBIO home"><Logo /></Link>
       </div>
-      <nav aria-label="App" className="flex-1 overflow-y-auto px-3">
+      <nav aria-label="App" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
         {GROUPS.map((group) => (
           <div key={group.title} className="mb-5">
             <p className="px-3 pb-2 text-[11px] font-bold tracking-[0.14em] text-muted/80 uppercase">{group.title}</p>
@@ -95,13 +96,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         )}
       </nav>
-      <div className="border-t border-line p-4">
+      <div className="shrink-0 border-t border-line bg-[#fbfaf5] p-4">
+        <div className="mb-3 hidden lg:block"><SymbioAssistant inline /></div>
         {me ? (
           <div className="flex items-center gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-full bg-sage font-display text-lg font-semibold text-forest-900">{me.name.charAt(0)}</div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold">{me.name}</p>
-              <p className="truncate text-[12px] text-muted">{me.industry} · {cityName(me.cityId)}</p>
+              <p className="truncate text-[12px] text-muted">{me.industry} · {cityName(me.cityId, me.location)}</p>
             </div>
             <button type="button" onClick={() => { logout(); toast("info", "Signed out"); router.push("/"); onNavigate?.(); }} className="focus-ring rounded-full p-2 text-muted hover:bg-mist hover:text-ink" aria-label="Sign out">
               <LogOut className="size-[18px]" />
@@ -153,12 +155,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [drawer]);
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="sticky top-0 hidden h-screen border-r border-line bg-[#fbfaf5] lg:block"><Sidebar /></aside>
+    <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
+      <aside className="sticky top-0 z-30 hidden h-dvh self-start border-r border-line bg-[#fbfaf5] lg:block"><Sidebar /></aside>
 
-      <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-line bg-ivory/90 px-4 backdrop-blur-md lg:hidden">
+      <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-line bg-ivory px-4 lg:hidden">
         <Link href="/" aria-label="SYMBIO home" className="focus-ring rounded-full"><Logo /></Link>
         <div className="flex items-center gap-2">
+          <SymbioAssistant inline />
           <NotificationBell />
           <button type="button" onClick={() => setDrawer(true)} className="focus-ring rounded-full p-2" aria-label="Open navigation" aria-expanded={drawer}>
             <Menu className="size-6" />
@@ -177,12 +180,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      <main className="min-w-0">
+      <main className="relative isolate z-0 min-w-0">
         <div className="border-b border-[#ecdfbd] bg-notice px-5 py-2 text-center text-[12.5px] font-medium text-notice-text">
           Demo · Fictional companies · {storageStatus === "unavailable" ? "Changes cannot be saved in this browser" : storageStatus === "corrupt" || storageStatus === "unsupported" ? "Saving paused" : "Data saved in this browser"}
         </div>
         <div className="mx-auto hidden max-w-[1180px] justify-end px-8 pt-5 lg:flex"><NotificationBell /></div>
-        <div className="mx-auto max-w-[1180px] px-5 py-8 sm:px-8 lg:pt-2 lg:pb-10">
+        <div className="mx-auto max-w-[1180px] px-5 py-8 sm:px-8 pb-24 lg:pt-2 lg:pb-24">
           {(storageStatus === "corrupt" || storageStatus === "unsupported") && (
             <Notice tone="red" className="mb-6">
               Saved SYMBIO data in this browser could not be read, so it was left untouched and sample data is shown without saving.{" "}

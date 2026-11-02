@@ -63,7 +63,7 @@ export default function LoginPage() {
                 <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sage-50 font-display text-lg font-semibold text-forest">{c.name.charAt(0)}</span>
                 <span className="min-w-0">
                   <span className="flex items-center gap-1 truncate text-[13px] font-semibold">{c.name}{c.verified && <ShieldCheck className="size-3.5 shrink-0 text-emerald" aria-label="Verified" />}</span>
-                  <span className="block truncate text-[12px] text-muted">{c.roles.map((r) => (r === "generator" ? "Generator" : "Consumer")).join(" & ")} · {cityName(c.cityId)}</span>
+                  <span className="block truncate text-[12px] text-muted">{c.roles.map((r) => (r === "generator" ? "Generator" : "Consumer")).join(" & ")} · {cityName(c.cityId, c.location)}</span>
                 </span>
               </button>
             </li>

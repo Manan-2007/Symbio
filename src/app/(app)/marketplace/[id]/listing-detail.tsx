@@ -62,7 +62,7 @@ export function ListingDetail() {
                 { icon: Droplets, label: "Moisture", value: `${listing.moisturePct}%` },
                 { icon: Calendar, label: "Availability", value: AVAILABILITY_LABELS[listing.availability] },
                 { icon: Package, label: "Listed as", value: `${fmtNumber(listing.quantity, 3)} ${listing.unit}${listing.unit === "tonne" ? "s" : ""}` },
-                { icon: MapPin, label: "Location", value: cityName(listing.cityId) },
+                { icon: MapPin, label: "Location", value: cityName(listing.cityId, listing.location) },
               ].map((row) => (
                 <div key={row.label} className="flex gap-3 rounded-2xl bg-mist p-4">
                   <row.icon className="mt-0.5 size-[18px] shrink-0 text-forest" aria-hidden />
@@ -129,7 +129,7 @@ export function ListingDetail() {
                 <div className="grid size-12 place-items-center rounded-full bg-sage font-display text-xl font-semibold text-forest-900">{company.name.charAt(0)}</div>
                 <div>
                   <p className="flex items-center gap-1.5 font-semibold">{company.name}{company.verified && <ShieldCheck className="size-4 text-emerald" aria-label="Verified" />}</p>
-                  <p className="text-[13px] text-muted">{company.industry} · {cityName(company.cityId)}</p>
+                  <p className="text-[13px] text-muted">{company.industry} · {cityName(company.cityId, company.location)}</p>
                 </div>
               </div>
               {avgRating !== null && <p className="mt-3 flex items-center gap-1 text-[13px]"><Star className="size-4 fill-gold text-gold" aria-hidden />{avgRating.toFixed(1)} <span className="text-muted">· {company.reviews.length} review{company.reviews.length === 1 ? "" : "s"}</span></p>}

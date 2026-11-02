@@ -40,7 +40,7 @@ export function ListingCard({ listing, compact = false }: { listing: Listing; co
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line pt-4 text-[13px] text-ink/80">
           <span className="font-semibold text-ink">{fmtKg(listing.quantityKg)}</span>
-          <span className="inline-flex items-center gap-1"><MapPin className="size-3.5 text-muted" aria-hidden />{cityName(listing.cityId)}</span>
+          <span className="inline-flex items-center gap-1"><MapPin className="size-3.5 text-muted" aria-hidden />{cityName(listing.cityId, listing.location)}</span>
           <span>Grade {listing.quality}</span>
         </div>
       </div>

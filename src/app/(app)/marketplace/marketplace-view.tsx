@@ -11,7 +11,7 @@ import { SelectField, TextField } from "@/components/ui/field";
 import { CATEGORY_ICONS } from "@/components/ui/visuals";
 import { CATEGORIES } from "@/services/types";
 import type { Category } from "@/services/types";
-import { CATEGORY_LABELS, CITIES, findCity, findMaterial } from "@/services/catalog";
+import { CATEGORY_LABELS, findCity, findMaterial } from "@/services/catalog";
 import { cx } from "@/utils/format";
 
 type Sort = "newest" | "price_asc" | "price_desc" | "qty_desc";
@@ -46,7 +46,7 @@ export function MarketplaceView() {
       if (Number.isFinite(max) && l.pricePerKg > max) return false;
       if (savedOnly && !saved.has(l.id)) return false;
       if (q) {
-        const hay = [l.title, l.description, material?.name, company?.name, findCity(l.cityId)?.name].join(" ").toLowerCase();
+        const hay = [l.title, l.description, material?.name, company?.name, findCity(l.cityId, l.location)?.name].join(" ").toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -59,6 +59,11 @@ export function MarketplaceView() {
     };
     return list.sort(sorters[sort]);
   }, [state.listings, state.companies, query, category, cityId, minKg, maxPrice, savedOnly, saved, sort]);
+
+  const locations = [...new Map(state.listings.map((l) => {
+    const place = findCity(l.cityId, l.location);
+    return [l.cityId, place] as const;
+  })).values()].filter((place) => !!place).sort((a, b) => a.name.localeCompare(b.name));
 
   const activeFilters = [category, cityId, minKg, maxPrice, savedOnly ? "saved" : "", query].filter(Boolean).length;
   const clear = () => { setQuery(""); setCategory(""); setCityId(""); setMinKg(""); setMaxPrice(""); setSavedOnly(false); };
@@ -109,7 +114,7 @@ export function MarketplaceView() {
           <div id="mp-filters" className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
             <SelectField label="Location" value={cityId} onChange={(e) => setCityId(e.target.value)}>
               <option value="">All locations</option>
-              {CITIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {locations.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </SelectField>
             <TextField label="Minimum quantity (kg)" type="number" inputMode="decimal" min={0} value={minKg} onChange={(e) => setMinKg(e.target.value)} error={numberError(minKg, "Quantity")} />
             <TextField label="Maximum price (₹/kg)" type="number" inputMode="decimal" min={0} value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} error={numberError(maxPrice, "Price")} />

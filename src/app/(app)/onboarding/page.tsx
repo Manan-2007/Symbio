@@ -1,5 +1,7 @@
 "use client";
 
+import { LocationPicker } from "@/components/location-picker";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -8,9 +10,9 @@ import { RequireAuth } from "@/components/layout/require-auth";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card, Notice, PageHeader } from "@/components/ui/primitives";
-import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/ui/field";
-import { CITIES } from "@/services/catalog";
-import type { Role } from "@/services/types";
+import { CheckboxField, TextAreaField, TextField } from "@/components/ui/field";
+import { findCity } from "@/services/catalog";
+import type { City, Role } from "@/services/types";
 
 function ProfileForm() {
   const { me, updateProfile } = useApp();
@@ -18,6 +20,7 @@ function ProfileForm() {
   const router = useRouter();
   const company = me!;
   const [roles, setRoles] = useState<Role[]>(company.roles);
+  const [location, setLocation] = useState<City | null>(findCity(company.cityId, company.location) ?? null);
   const [error, setError] = useState<string | null>(null);
   const isNew = !company.description;
 
@@ -28,7 +31,7 @@ function ProfileForm() {
     const d = new FormData(e.currentTarget);
     const year = String(d.get("foundedYear") ?? "").trim();
     const r = updateProfile({
-      name: d.get("name"), industry: d.get("industry"), cityId: d.get("cityId"), phone: d.get("phone"),
+      name: d.get("name"), industry: d.get("industry"), cityId: location?.id, location: location ?? undefined, phone: d.get("phone"),
       description: d.get("description"), roles, foundedYear: year === "" ? Number.NaN : Number(year),
     });
     if (!r.ok) return setError(r.error);
@@ -41,9 +44,7 @@ function ProfileForm() {
       <form onSubmit={submit} noValidate onChange={() => setError(null)} className="grid gap-5 sm:grid-cols-2">
         <TextField name="name" label="Company name" defaultValue={company.name} maxLength={120} className="sm:col-span-2" />
         <TextField name="industry" label="Industry" defaultValue={company.industry} maxLength={120} />
-        <SelectField name="cityId" label="Location" defaultValue={company.cityId}>
-          {CITIES.map((c) => <option key={c.id} value={c.id}>{c.name}, {c.state}</option>)}
-        </SelectField>
+        <LocationPicker label="Location" value={location} onChange={setLocation} />
         <TextField name="phone" type="tel" label="Contact number" defaultValue={company.phone} />
         <TextField name="foundedYear" type="number" label="Founded" defaultValue={company.foundedYear} min={1800} max={new Date().getFullYear()} />
         <TextField label="Business email" value={company.email} readOnly disabled hint="Used to sign in; cannot be changed in the demo." className="sm:col-span-2" />

@@ -107,7 +107,7 @@ function Matches() {
                   <h2 className="font-display text-[24px] text-forest-950">Compatibility breakdown</h2>
                   <FactorBar label="Material" value={top.breakdown.material} weight={WEIGHTS.material} />
                   <FactorBar label="Quantity" value={top.breakdown.quantity} weight={WEIGHTS.quantity} detail={`${fmtKg(top.usableKg)} usable of ${fmtKg(top.requirement.quantityKg)} needed`} />
-                  <FactorBar label="Proximity" value={top.breakdown.distance} weight={WEIGHTS.distance} detail={`~${top.distanceKm.toFixed(1)} km straight-line, ${cityName(top.listing.cityId)} → ${cityName(top.requirement.cityId)}`} />
+                  <FactorBar label="Proximity" value={top.breakdown.distance} weight={WEIGHTS.distance} detail={`~${top.distanceKm.toFixed(1)} km straight-line, ${cityName(top.listing.cityId, top.listing.location)} → ${cityName(top.requirement.cityId, top.requirement.location)}`} />
                   <FactorBar label="Price" value={top.breakdown.price} weight={WEIGHTS.price} />
                 </div>
               </div>

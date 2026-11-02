@@ -24,8 +24,8 @@ export function MatchDetail() {
   const listing = parsed && state.listings.find((l) => l.id === parsed.listingId);
   const requirement = parsed && state.requirements.find((r) => r.id === parsed.requirementId);
   const result = useMemo(() => (listing && requirement ? evaluate(listing, requirement) : null), [listing, requirement]);
-  const from = listing ? findCity(listing.cityId) : undefined;
-  const to = requirement ? findCity(requirement.cityId) : undefined;
+  const from = listing ? findCity(listing.cityId, listing.location) : undefined;
+  const to = requirement ? findCity(requirement.cityId, requirement.location) : undefined;
   const markers = useMemo(() => (from && to ? [
     { id: "s", lat: from.lat, lng: from.lng, label: "Supplier", tone: "generator" as const },
     { id: "b", lat: to.lat, lng: to.lng, label: "Buyer", tone: "consumer" as const },
@@ -130,7 +130,7 @@ export function MatchDetail() {
         <Card className="p-6">
           <div className="flex items-center gap-2 text-[12px] font-bold tracking-[0.12em] text-muted uppercase"><Building2 className="size-4" /> Supplier</div>
           <p className="mt-3 flex items-center gap-1.5 text-[17px] font-semibold">{supplier?.name}{supplier?.verified && <ShieldCheck className="size-4 text-emerald" aria-label="Verified" />}</p>
-          <p className="text-[13px] text-muted">{supplier?.industry} · {cityName(listing.cityId)}</p>
+          <p className="text-[13px] text-muted">{supplier?.industry} · {cityName(listing.cityId, listing.location)}</p>
           <ButtonLink href={`/companies/${listing.companyId}`} size="sm" variant="secondary" className="mt-4">View profile</ButtonLink>
         </Card>
         <Card className="p-6">
@@ -140,7 +140,7 @@ export function MatchDetail() {
             <li>{materialName(requirement.materialId)} · {fmtKg(requirement.quantityKg)}</li>
             <li>Budget ≤ {fmtPricePerKg(requirement.maxBudgetPerKg)}</li>
             <li>{QUALITY_LABELS[requirement.minQuality].split(" · ")[0]}+ · contamination ≤ {CONTAMINATION_LABELS[requirement.maxContamination].toLowerCase()}</li>
-            <li>{cityName(requirement.cityId)} · within {requirement.maxDistanceKm} km</li>
+            <li>{cityName(requirement.cityId, requirement.location)} · within {requirement.maxDistanceKm} km</li>
           </ul>
           <ButtonLink href={`/companies/${requirement.companyId}`} size="sm" variant="secondary" className="mt-4">View profile</ButtonLink>
         </Card>
