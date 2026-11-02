@@ -44,3 +44,4 @@ next-env.d.ts
 
 # local check output
 /.check-build/
+/.check-platform/

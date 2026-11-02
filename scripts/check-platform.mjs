@@ -1,0 +1,171 @@
+// Lightweight checks for the SYMBIO platform services (no test framework).
+// Run with: pnpm check:platform  (compiles src/services to a temp dir first)
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
+
+const require = createRequire(import.meta.url);
+const dir = resolve(process.argv[2]);
+const load = (name) => require(`${dir}/${name}.js`);
+const { createSeedState } = load("demoData");
+const engine = load("matchingEngine");
+const carbon = load("carbonCalculator");
+const actions = load("actions");
+const { validateAppState } = load("validation");
+const { answerFromCatalogue, classifyMaterialImage } = load("ai");
+const analytics = load("analytics");
+
+let n = 0;
+let counter = 0;
+const ctx = (now = "2026-11-02T10:00:00.000Z") => ({ newId: () => `id-${++counter}`, now });
+const check = (name, fn) => { fn(); n++; };
+
+const seed = createSeedState();
+
+check("seed passes stored-state validation", () => assert.ok(validateAppState(JSON.parse(JSON.stringify(seed)))));
+
+check("Green Furniture ↔ FreshGrow sample scores 97.5", () => {
+  const listing = seed.listings.find((l) => l.id === "ls-sawdust-green");
+  const req = seed.requirements.find((r) => r.id === "rq-freshgrow-sawdust");
+  const m = engine.evaluate(listing, req);
+  assert.ok(engine.isMatch(m), JSON.stringify(m));
+  assert.equal(m.score, 97.5);
+  assert.deepEqual([m.breakdown.material, m.breakdown.quantity, m.breakdown.price], [1, 1, 1]);
+  assert.ok(Math.abs(m.distanceKm - 19.57) < 0.1);
+});
+
+check("incompatible material is rejected regardless of other factors", () => {
+  const req = seed.requirements.find((r) => r.id === "rq-freshgrow-sawdust");
+  const r = engine.evaluate(seed.listings.find((l) => l.id === "ls-cotton-eco"), req);
+  assert.equal(engine.isMatch(r), false);
+  assert.match(r.reason, /Incompatible/);
+});
+
+check("substitute scores below exact; quality/contamination/moisture/radius gates reject", () => {
+  const base = seed.listings.find((l) => l.id === "ls-sawdust-green");
+  const req = seed.requirements.find((r) => r.id === "rq-freshgrow-sawdust");
+  const sub = engine.evaluate({ ...base, id: "x1", materialId: "wood_chips" }, req);
+  assert.ok(engine.isMatch(sub) && sub.breakdown.material === 0.7 && sub.score < 97.5);
+  for (const [patch, re] of [[{ quality: "C" }, /Quality/], [{ contamination: "high" }, /Contamination/], [{ moisturePct: 40 }, /Moisture/], [{ cityId: "delhi" }, /radius/]]) {
+    const r = engine.evaluate({ ...base, id: "x2", ...patch }, req);
+    assert.equal(engine.isMatch(r), false, JSON.stringify(patch));
+    assert.match(r.reason, re);
+  }
+  assert.equal(engine.isMatch(engine.evaluate({ ...base, companyId: req.companyId }, req)), false, "same company");
+});
+
+check("price above budget lowers P but does not reject; partial quantity lowers Q", () => {
+  const base = seed.listings.find((l) => l.id === "ls-sawdust-green");
+  const req = seed.requirements.find((r) => r.id === "rq-freshgrow-sawdust");
+  const pricey = engine.evaluate({ ...base, pricePerKg: 6 }, req);
+  assert.ok(engine.isMatch(pricey) && Math.abs(pricey.breakdown.price - 0.8) < 1e-9 && pricey.cautions.length > 0);
+  const small = engine.evaluate({ ...base, quantityKg: 200, quantity: 200 }, req);
+  assert.ok(engine.isMatch(small) && small.breakdown.quantity === 0.5);
+});
+
+check("ranking is deterministic and descending", () => {
+  const ms = engine.matchesForCompany("co-freshgrow", seed.listings, seed.requirements);
+  assert.ok(ms.length >= 1);
+  for (let i = 1; i < ms.length; i++) assert.ok(ms[i - 1].score >= ms[i].score);
+  assert.deepEqual(engine.parseMatchId(engine.matchId("a", "b")), { listingId: "a", requirementId: "b" });
+});
+
+check("carbon counts only completed exchanges with material factors", () => {
+  const recs = carbon.impactRecords(seed);
+  assert.equal(recs.length, seed.deals.filter((d) => d.status === "completed").length);
+  assert.equal(carbon.estimateCo2eKg("sawdust", 400), 160);
+  const t = carbon.impactTotals(recs);
+  assert.ok(t.reusedKg > 0 && t.co2eKg > 0);
+});
+
+check("demo auth, registration validation, no password storage", () => {
+  assert.equal(actions.loginWithEmail(seed, "nobody@x.com").ok, false);
+  const li = actions.loginWithEmail(seed, "OPS@greenfurniture.demo");
+  assert.ok(li.ok && li.value.session.companyId === "co-green-furniture");
+  const bad = actions.register(seed, { companyName: "Acme", email: "acme@x.com", password: "short", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx());
+  assert.equal(bad.ok, false);
+  const ok = actions.register(seed, { companyName: "Acme", email: "acme@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator", "consumer"] }, ctx());
+  assert.ok(ok.ok);
+  assert.ok(!JSON.stringify(ok.value).includes("long-enough"), "password must not be stored");
+  assert.equal(actions.register(ok.value, { companyName: "Acme 2", email: "ACME@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx()).ok, false, "duplicate email");
+  assert.ok(validateAppState(JSON.parse(JSON.stringify(ok.value))));
+});
+
+check("listing and requirement creation validate and respect roles", () => {
+  const asGreen = actions.loginAsCompany(seed, "co-green-furniture").value;
+  const input = { materialId: "sawdust", title: "", description: "", quantity: 1.5, unit: "tonne", pricePerKg: 0, cityId: "ludhiana", quality: "A", moisturePct: 10, contamination: "none", availability: "weekly", imageDataUrl: null };
+  const ok = actions.addListing(asGreen, input, ctx());
+  assert.ok(ok.ok && ok.value.listing.quantityKg === 1500 && ok.value.listing.title === "Sawdust");
+  for (const patch of [{ quantity: 0 }, { quantity: NaN }, { pricePerKg: -1 }, { materialId: "gold" }, { moisturePct: 120 }, { unit: "lb" }]) {
+    assert.equal(actions.addListing(asGreen, { ...input, ...patch }, ctx()).ok, false, JSON.stringify(patch));
+  }
+  assert.equal(actions.addRequirement(asGreen, { materialId: "sawdust", quantityKg: 10, maxBudgetPerKg: 1, cityId: "ludhiana", maxDistanceKm: 50, minQuality: "B", maxContamination: "low", maxMoisturePct: null, delivery: "pickup", notes: "" }, ctx()).ok, false, "generator-only cannot publish requirements");
+  assert.equal(actions.addListing(seed, input, ctx()).ok, false, "signed out");
+});
+
+check("deal lifecycle: request → counter → accept → dispatch → receive; impact only at completion", () => {
+  let s = actions.loginAsCompany(seed, "co-freshgrow").value;
+  const before = carbon.impactRecords(s).length;
+  const req = actions.requestDeal(s, { listingId: "ls-sawdust-green", requirementId: "rq-freshgrow-sawdust", quantityKg: 400, pricePerKg: 3.5, note: "Weekly pickup?" }, ctx());
+  assert.ok(req.ok);
+  s = req.value.state;
+  const id = req.value.deal.id;
+  assert.equal(actions.requestDeal(s, { listingId: "ls-sawdust-green", requirementId: null, quantityKg: 10, pricePerKg: 4, note: "" }, ctx()).ok, false, "duplicate open request");
+  assert.equal(actions.acceptDeal(s, id, ctx()).ok, false, "buyer cannot accept own offer");
+  assert.equal(actions.requestDeal(s, { listingId: "ls-sawdust-green", requirementId: null, quantityKg: 9999, pricePerKg: 4, note: "" }, ctx()).ok, false);
+  s = actions.loginAsCompany(s, "co-green-furniture").value;
+  s = actions.counterOffer(s, id, { quantityKg: 400, pricePerKg: 4, note: "₹4 includes bagging" }, ctx()).value;
+  assert.equal(s.deals.find((d) => d.id === id).status, "negotiating");
+  assert.equal(actions.acceptDeal(s, id, ctx()).ok, false, "seller cannot accept own counter");
+  s = actions.loginAsCompany(s, "co-freshgrow").value;
+  s = actions.acceptDeal(s, id, ctx()).value;
+  assert.equal(actions.markDispatched(s, id, ctx()).ok, false, "buyer cannot dispatch");
+  assert.equal(carbon.impactRecords(s).length, before, "accepted ≠ completed");
+  s = actions.loginAsCompany(s, "co-green-furniture").value;
+  s = actions.markDispatched(s, id, ctx()).value;
+  s = actions.loginAsCompany(s, "co-freshgrow").value;
+  s = actions.markReceived(s, id, ctx()).value;
+  const deal = s.deals.find((d) => d.id === id);
+  assert.equal(deal.status, "completed");
+  assert.equal(analytics.transactionValue(deal), 1600);
+  assert.equal(carbon.impactRecords(s).length, before + 1);
+  assert.equal(s.listings.find((l) => l.id === "ls-sawdust-green").quantityKg, 500, "no hidden inventory change");
+  s = actions.sendMessage(s, id, "Thanks!", ctx()).value;
+  assert.ok(validateAppState(JSON.parse(JSON.stringify(s))));
+  const outsider = actions.loginAsCompany(s, "co-punjab-steel").value;
+  assert.equal(actions.sendMessage(outsider, id, "hi", ctx()).ok, false, "non-party cannot message");
+});
+
+check("stored-state validation rejects corruption", () => {
+  const good = JSON.parse(JSON.stringify(seed));
+  const bads = [
+    { ...good, schemaVersion: 1 },
+    { ...good, listings: [{ ...good.listings[0], pricePerKg: -3 }] },
+    { ...good, listings: [{ ...good.listings[0], companyId: "co-missing" }] },
+    { ...good, deals: [{ ...good.deals[0], sellerId: good.deals[0].buyerId }] },
+    { ...good, session: { companyId: "nope" } },
+    { ...good, savedListingIds: { "co-freshgrow": ["missing"] } },
+    { ...good, companies: [...good.companies, good.companies[0]] },
+    null, [], "x",
+  ];
+  for (const b of bads) assert.equal(validateAppState(b), null);
+});
+
+check("assistant answers from catalogue; classifier is honest when unconfigured", () => {
+  assert.ok(answerFromCatalogue("What can I do with sawdust?").materialIds.includes("sawdust"));
+  assert.ok(answerFromCatalogue("Who purchases textile waste?").materialIds.includes("cotton_scraps"));
+  assert.ok(answerFromCatalogue("Which industries use recycled plastic?").materialIds.includes("pet_flakes"));
+  assert.equal(answerFromCatalogue("How can I find nearby buyers?").materialIds.length, 0);
+  assert.equal(answerFromCatalogue("competitive pricing?").materialIds.length, 0, "no substring false positives");
+});
+
+const cls = await classifyMaterialImage("data:image/png;base64,AAAA");
+assert.equal(cls.status, "unavailable");
+n++;
+
+const series = analytics.monthlySeries(carbon.impactRecords(seed), "2026-11-02T00:00:00.000Z");
+assert.equal(series.length, 6);
+assert.equal(series[0].month, "Jun");
+n++;
+
+console.log(`platform checks passed (${n})`);
