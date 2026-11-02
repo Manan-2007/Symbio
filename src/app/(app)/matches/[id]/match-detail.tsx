@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, Ban, Building2, CheckCircle2, ClipboardList, Package, Send, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Ban, Building2, CheckCircle2, ClipboardList, Package, Scale, Send, ShieldCheck } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Badge, Card, EmptyState, LoadingBlock, Notice } from "@/components/ui/primitives";
@@ -90,6 +90,13 @@ export function MatchDetail() {
             ) : (
               <ButtonLink href="/login">Sign in as the buyer to connect</ButtonLink>
             )}
+            <ButtonLink
+              href={`/barter?${new URLSearchParams({ a: supplier?.industry ?? "Supplier", ab: listing.title, b: buyer?.industry ?? "Buyer", bp: material.reuses[0] ?? "Upcycled product", kg: String(m.usableKg) }).toString()}`}
+              variant="secondary"
+              icon={<Scale className="size-4" />}
+            >
+              Estimate barter
+            </ButtonLink>
             <p className="text-[12px] text-muted">Suggested opening offer: {fmtKg(m.usableKg)} at {fmtPricePerKg(suggestedPrice)} = {fmtInr(m.usableKg * suggestedPrice)}</p>
           </div>
         </div>

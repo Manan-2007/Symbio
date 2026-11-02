@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  Building2, ClipboardList, Handshake, LayoutDashboard, Leaf, LogIn, LogOut, Map, Menu, PlugZap, PlusCircle, Receipt, RotateCcw, ScanSearch, Settings, Sparkles, Store, X,
+  Building2, ClipboardList, Handshake, LayoutDashboard, Leaf, LogIn, LogOut, Map, Menu, PlugZap, Scale, PlusCircle, Receipt, RotateCcw, ScanSearch, Settings, Sparkles, Store, X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useApp } from "@/components/app-provider";
@@ -35,6 +35,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: "/matches", label: "Smart matches", icon: Sparkles, auth: true },
       { href: "/negotiations", label: "Negotiations", icon: Handshake, auth: true },
+      { href: "/barter", label: "Barter estimator", icon: Scale },
       { href: "/map", label: "Map", icon: Map },
     ],
   },
