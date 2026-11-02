@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  Building2, ClipboardList, Handshake, LayoutDashboard, Leaf, LogIn, LogOut, Map, Menu, PlusCircle, Receipt, RotateCcw, ScanSearch, Settings, Sparkles, Store, X,
+  Building2, ClipboardList, Handshake, LayoutDashboard, Leaf, LogIn, LogOut, Map, Menu, PlugZap, PlusCircle, Receipt, RotateCcw, ScanSearch, Settings, Sparkles, Store, X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useApp } from "@/components/app-provider";
@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { cityName } from "@/services/catalog";
+import { NotificationBell } from "@/components/notification-bell";
 import { cx } from "@/utils/format";
 
 type Item = { href: string; label: string; icon: typeof Store; auth?: boolean };
@@ -88,6 +89,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <ul className="space-y-0.5">
               <li><Link href={`/companies/${me.id}`} onClick={onNavigate} className={linkClass(pathname === `/companies/${me.id}`)}><Building2 className="size-[18px]" aria-hidden />Company profile</Link></li>
               <li><Link href="/onboarding" onClick={onNavigate} className={linkClass(pathname === "/onboarding")}><Settings className="size-[18px]" aria-hidden />Profile settings</Link></li>
+              <li><Link href="/integrations" onClick={onNavigate} className={linkClass(pathname === "/integrations")}><PlugZap className="size-[18px]" aria-hidden />Integrations</Link></li>
             </ul>
           </div>
         )}
@@ -155,9 +157,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-line bg-ivory/90 px-4 backdrop-blur-md lg:hidden">
         <Link href="/" aria-label="SYMBIO home" className="focus-ring rounded-full"><Logo /></Link>
-        <button type="button" onClick={() => setDrawer(true)} className="focus-ring rounded-full p-2" aria-label="Open navigation" aria-expanded={drawer}>
-          <Menu className="size-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button type="button" onClick={() => setDrawer(true)} className="focus-ring rounded-full p-2" aria-label="Open navigation" aria-expanded={drawer}>
+            <Menu className="size-6" />
+          </button>
+        </div>
       </div>
       <AnimatePresence>
         {drawer && (
@@ -175,7 +180,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="border-b border-[#ecdfbd] bg-notice px-5 py-2 text-center text-[12.5px] font-medium text-notice-text">
           Demo · Fictional companies · {storageStatus === "unavailable" ? "Changes cannot be saved in this browser" : storageStatus === "corrupt" || storageStatus === "unsupported" ? "Saving paused" : "Data saved in this browser"}
         </div>
-        <div className="mx-auto max-w-[1180px] px-5 py-8 sm:px-8 lg:py-10">
+        <div className="mx-auto hidden max-w-[1180px] justify-end px-8 pt-5 lg:flex"><NotificationBell /></div>
+        <div className="mx-auto max-w-[1180px] px-5 py-8 sm:px-8 lg:pt-2 lg:pb-10">
           {(storageStatus === "corrupt" || storageStatus === "unsupported") && (
             <Notice tone="red" className="mb-6">
               Saved SYMBIO data in this browser could not be read, so it was left untouched and sample data is shown without saving.{" "}

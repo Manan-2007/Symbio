@@ -55,7 +55,7 @@ function ProfileForm() {
             <CheckboxField label="Waste Consumer (publish requirements)" checked={roles.includes("consumer")} onChange={() => toggle("consumer")} />
           </div>
         </fieldset>
-        <Notice className="sm:col-span-2">Verification badges are granted by the SYMBIO team after document checks. Not available in the demo.</Notice>
+        <Notice className="sm:col-span-2">Get a verified badge from your company profile by submitting your GSTIN and GST certificate.</Notice>
         {error && <Notice tone="red" className="sm:col-span-2">{error}</Notice>}
         <div className="flex justify-end gap-2 sm:col-span-2">
           <Button variant="secondary" onClick={() => router.back()}>Cancel</Button>

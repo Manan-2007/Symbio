@@ -7,6 +7,7 @@ import { useApp } from "@/components/app-provider";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge, Card, EmptyState, LoadingBlock } from "@/components/ui/primitives";
 import { ListingCard } from "@/components/listing-card";
+import { VerificationCard } from "@/components/verification-card";
 import { cityName, materialName } from "@/services/catalog";
 import { impactRecords, impactTotals } from "@/services/carbonCalculator";
 import { trustScore } from "@/services/analytics";
@@ -38,7 +39,7 @@ export function CompanyProfile() {
             <div className="sm:pt-3">
               <h1 className="flex flex-wrap items-center gap-2 font-display text-[36px] leading-tight text-forest-950">{company.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                {company.verified ? <Badge tone="green" icon={<ShieldCheck className="size-3" />}>Verified</Badge> : <Badge tone="neutral" icon={<ShieldAlert className="size-3" />}>Unverified</Badge>}
+                {company.verified ? <Badge tone="green" icon={<ShieldCheck className="size-3" />}>Verified</Badge> : company.verification?.status === "pending" ? <Badge tone="gold" icon={<ShieldAlert className="size-3" />}>Verification pending</Badge> : <Badge tone="neutral" icon={<ShieldAlert className="size-3" />}>Unverified</Badge>}
                 {company.roles.map((r) => <Badge key={r} tone="sage">{r === "generator" ? "Waste Generator" : "Waste Consumer"}</Badge>)}
                 {company.isDemo && <Badge tone="gold">Demo company</Badge>}
               </div>
@@ -50,6 +51,7 @@ export function CompanyProfile() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
         <div className="space-y-6">
+          {isMe && <VerificationCard company={company} />}
           <Card className="p-6">
             <h2 className="font-display text-[22px] text-forest-950">Business information</h2>
             <p className="mt-2 text-[14px] text-muted">{company.description || "No description yet."}</p>
