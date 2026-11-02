@@ -1,25 +1,113 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, Copy, FlaskConical, Layers, Loader2, Scale, Scissors, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, Copy, FlaskConical, GitMerge, Layers, Loader2, Scale, Scissors, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, Notice, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { TextField } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { estimateBarter } from "@/services/ai";
+import { answerFromCatalogue, estimateBarter } from "@/services/ai";
+import { useApp } from "@/components/app-provider";
+import { TrustBadge } from "@/components/trust-badge";
+import { buildBarterMarket, describeOffer } from "@/services/stableMatching";
+import type { BarterMarket } from "@/services/stableMatching";
+import { materialName } from "@/services/catalog";
+import type { AppState, Company, Listing } from "@/services/types";
 import { BARTER_LIMITS, mveBalance, yieldRatio } from "@/services/barter";
 import type { BarterEstimate, BarterInput } from "@/services/barter";
 import { cx, fmtNumber } from "@/utils/format";
 
-const EXAMPLES: (Omit<BarterInput, "quantityKg"> & { label: string })[] = [
-  { label: "Sawdust → mushroom substrate", industryA: "Furniture workshop", byproduct: "Untreated hardwood sawdust", industryB: "Mushroom farm", finalProduct: "Oyster mushroom substrate blocks" },
-  { label: "Cotton scraps → insulation", industryA: "Garment manufacturer", byproduct: "Pre-consumer cotton cutting scraps", industryB: "Insulation maker", finalProduct: "Thermal insulation batts" },
-  { label: "PET flakes → food trays", industryA: "Plastic recycler", byproduct: "Washed clear PET flakes", industryB: "Packaging manufacturer", finalProduct: "Thermoformed food trays" },
-  { label: "Steel turnings → castings", industryA: "CNC machining shop", byproduct: "Oily mild steel turnings", industryB: "Foundry", finalProduct: "Grey iron castings" },
+const EXAMPLES: (BarterInput & { label: string })[] = [
+  { label: "Sawdust → mushroom substrate", industryA: "Furniture workshop", byproduct: "Untreated hardwood sawdust", industryB: "Mushroom farm", finalProduct: "Oyster mushroom substrate blocks", quantityKg: 800 },
+  { label: "Cotton scraps → insulation", industryA: "Garment manufacturer", byproduct: "Pre-consumer cotton cutting scraps", industryB: "Insulation maker", finalProduct: "Thermal insulation batts", quantityKg: 450 },
+  { label: "PET flakes → food trays", industryA: "Plastic recycler", byproduct: "Washed clear PET flakes", industryB: "Packaging manufacturer", finalProduct: "Thermoformed food trays", quantityKg: 650 },
+  { label: "Coffee grounds → compost", industryA: "Café chain", byproduct: "Spent coffee grounds", industryB: "Compost producer", finalProduct: "Organic compost", quantityKg: 1200 },
 ];
+
+const OFFER_ID = "your-offer";
+
+/**
+ * Turns the form's free-text byproduct into a marketplace offer the stable matcher can rank.
+ * Uses the catalogue keywords; returns null when the text doesn't map to a known material.
+ */
+function offerFromInput(input: BarterInput, me: Company | null, state: AppState): Listing | null {
+  const materialId = answerFromCatalogue(input.byproduct).materialIds[0];
+  if (!materialId) return null;
+  const city = me?.cityId ?? state.companies[0]?.cityId ?? "ludhiana";
+  return {
+    id: OFFER_ID, companyId: me?.id ?? "guest-offer", materialId, title: `${input.byproduct} (your offer)`, description: "",
+    quantity: input.quantityKg, unit: "kg", quantityKg: input.quantityKg, pricePerKg: 0, cityId: city, location: me?.location,
+    quality: "B", moisturePct: 12, contamination: "low", availability: "immediate", imageDataUrl: null, status: "active", createdAt: new Date().toISOString(),
+  };
+}
+
+function StableMatches({ market, offerMaterial }: { market: BarterMarket; offerMaterial: string | null }) {
+  const yours = market.pairs.find((p) => p.proposer.id === OFFER_ID);
+  const offeredButUnmatched = offerMaterial && !yours;
+  return (
+    <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} aria-labelledby="stable-heading">
+      <Card className="p-6 sm:p-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-full bg-forest text-white"><GitMerge className="size-4" aria-hidden /></span>
+            <div>
+              <h2 id="stable-heading" className="font-display text-[26px] leading-tight text-forest-950">Stable barter matches</h2>
+              <p className="text-[12.5px] text-muted">Gale-Shapley over {market.proposers.length} offers and {market.reviewers.length} counterparties · {market.proposals} proposals · {market.stable ? "no blocking pairs" : "unstable"}</p>
+            </div>
+          </div>
+          <Badge tone="green">Computed instantly · no AI</Badge>
+        </div>
+        {!offerMaterial && <Notice className="mb-4">Your byproduct didn&apos;t map to a catalogue material, so the market below shows the demo marketplace only. Try words like sawdust, cotton, PET, steel or coffee.</Notice>}
+        {offeredButUnmatched && <Notice className="mb-4">No compatible counterparty accepted your {materialName(offerMaterial)} offer this round (material, quality and distance gates apply). Pairs for other offers are shown.</Notice>}
+        {market.pairs.length === 0 ? (
+          <p className="text-[14px] text-muted">No compatible offer–requirement pairs in the market yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-[13.5px]">
+              <thead>
+                <tr className="border-b border-line text-[12px] text-muted">
+                  <th className="pb-2 font-semibold">Offer (proposer)</th>
+                  <th className="pb-2 font-semibold">Matched counterparty (reviewer)</th>
+                  <th className="pb-2 text-right font-semibold">Usable</th>
+                  <th className="pb-2 text-right font-semibold">Net yield</th>
+                  <th className="pb-2 text-right font-semibold">Ratio</th>
+                  <th className="pb-2 text-right font-semibold">Score</th>
+                  <th className="pb-2 text-right font-semibold">Choice</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {market.pairs.map((p) => (
+                  <tr key={p.proposer.id} className={p.proposer.id === OFFER_ID ? "bg-sage-50" : undefined}>
+                    <td className="py-2.5 pr-3">
+                      <p className="font-semibold">{p.proposer.ownerName}{p.proposer.id === OFFER_ID && <Badge tone="sage" className="ml-2">Your offer</Badge>}</p>
+                      <p className="text-[12px] text-muted">{describeOffer(p.proposer)}</p>
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <p className="flex flex-wrap items-center gap-1.5 font-semibold">{p.reviewer.ownerName}<TrustBadge score={p.reviewer.trustScore} /></p>
+                      <p className="text-[12px] text-muted">Needs {fmtNumber(p.reviewer.requiredQty)} kg {materialName(p.reviewer.requiredItem).toLowerCase()} · makes {p.reviewer.itemOffered.toLowerCase()}</p>
+                    </td>
+                    <td className="py-2.5 text-right tabular-nums">{fmtNumber(p.usableKg)} kg</td>
+                    <td className="py-2.5 text-right tabular-nums font-semibold text-forest">{fmtNumber(p.netYieldKg)} kg</td>
+                    <td className="py-2.5 text-right font-mono text-[12.5px]">{p.exchangeRatio}</td>
+                    <td className="py-2.5 text-right tabular-nums">{p.match.score}%</td>
+                    <td className="py-2.5 text-right text-[12px] text-muted" title="Rank each side gave the other (1 = first choice)">#{p.proposerChoice} / #{p.reviewerChoice}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {market.unmatched.length > 0 && (
+          <p className="mt-4 text-[12.5px] text-muted">Unmatched this round: {market.unmatched.map((u) => `${u.ownerName} (${materialName(u.itemType).toLowerCase()})`).join(", ")}.</p>
+        )}
+        <p className="mt-3 text-[12px] text-muted">Offers rank counterparties by match score, then usable yield, then trust; counterparties rank offers by match score, then supplier trust, then yield. Net yield uses illustrative recovery rates by category, reduced for contamination and excess moisture. Ratio = kg supplied : kg usable output.</p>
+      </Card>
+    </motion.section>
+  );
+}
 
 const PROCESS_META = {
   subtractive: { label: "Subtractive", icon: Scissors, blurb: "Purification, separation or machining removes what isn't wanted." },
@@ -67,6 +155,9 @@ function summaryText(input: BarterInput, e: BarterEstimate, qty: number): string
 export function BarterView() {
   const params = useSearchParams();
   const { toast } = useToast();
+  const { state, me } = useApp();
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const [market, setMarket] = useState<{ data: BarterMarket; offerMaterial: string | null } | null>(null);
   const [form, setForm] = useState<Omit<BarterInput, "quantityKg"> & { quantity: string }>({
     industryA: params.get("a")?.slice(0, BARTER_LIMITS.text) ?? "",
     byproduct: params.get("ab")?.slice(0, BARTER_LIMITS.text) ?? "",
@@ -81,14 +172,22 @@ export function BarterView() {
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => { setForm((f) => ({ ...f, [key]: e.target.value })); setError(null); };
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const quantityKg = form.quantity.trim() === "" ? Number.NaN : Number(form.quantity);
-    const input: BarterInput = { industryA: form.industryA.trim(), byproduct: form.byproduct.trim(), industryB: form.industryB.trim(), finalProduct: form.finalProduct.trim(), quantityKg };
-    if ([input.industryA, input.byproduct, input.industryB, input.finalProduct].some((v) => v.length < 2)) return setError("Fill in both industries, the byproduct and the final product.");
-    if (!Number.isFinite(quantityKg) || quantityKg < BARTER_LIMITS.minKg || quantityKg > BARTER_LIMITS.maxKg) return setError("Quantity must be between 1 kg and 10,000 t.");
-    setBusy(true);
+  /** Runs the pipeline for explicit input: stable matching (instant, local) then the AI estimate. */
+  async function run(input: BarterInput) {
+    if ([input.industryA, input.byproduct, input.industryB, input.finalProduct].some((v) => v.length < 2)) {
+      setError("Fill in both industries, the byproduct and the final product (at least 2 characters each).");
+      return;
+    }
+    if (!Number.isFinite(input.quantityKg) || input.quantityKg < BARTER_LIMITS.minKg || input.quantityKg > BARTER_LIMITS.maxKg) {
+      setError("Batch size must be a number between 1 kg and 10,000 t.");
+      return;
+    }
+    setError(null);
+    const offer = offerFromInput(input, me, state);
+    setMarket({ data: buildBarterMarket(state, offer ? [offer] : []), offerMaterial: offer?.materialId ?? null });
     setResult(null);
+    setBusy(true);
+    requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
     const r = await estimateBarter(input);
     setBusy(false);
     if (r.status !== "ok") {
@@ -98,6 +197,20 @@ export function BarterView() {
     }
     setResult({ input, estimate: r.estimate });
     setScaleKg(input.quantityKg);
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const quantityKg = form.quantity.trim() === "" ? Number.NaN : Number(form.quantity);
+    void run({ industryA: form.industryA.trim(), byproduct: form.byproduct.trim(), industryB: form.industryB.trim(), finalProduct: form.finalProduct.trim(), quantityKg });
+  }
+
+  /** Fills the form with a preset and runs the whole pipeline straight away. */
+  function tryExample(example: (typeof EXAMPLES)[number]) {
+    if (busy) return;
+    const input: BarterInput = { industryA: example.industryA, byproduct: example.byproduct, industryB: example.industryB, finalProduct: example.finalProduct, quantityKg: example.quantityKg };
+    setForm({ ...input, quantity: String(input.quantityKg) });
+    void run(input);
   }
 
   const e = result?.estimate;
@@ -137,14 +250,17 @@ export function BarterView() {
           <div>
             <p className="mb-2 text-[12px] font-semibold text-muted">Try an example</p>
             <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map(({ label, ...ex }) => (
-                <button key={label} type="button" onClick={() => { setForm((f) => ({ ...f, ...ex })); setError(null); }} className="focus-ring rounded-full border border-line-strong bg-white px-3.5 py-1.5 text-[13px] font-medium hover:border-forest hover:text-forest">{label}</button>
+              {EXAMPLES.map((ex) => (
+                <button key={ex.label} type="button" disabled={busy} onClick={() => tryExample(ex)} className="focus-ring rounded-full border border-line-strong bg-white px-3.5 py-1.5 text-[13px] font-medium hover:border-forest hover:text-forest disabled:opacity-50">{ex.label}</button>
               ))}
             </div>
           </div>
           {error && <Notice tone="red">{error}</Notice>}
         </form>
       </Card>
+
+      <div ref={resultsRef} className="scroll-mt-6" />
+      {market && <StableMatches market={market.data} offerMaterial={market.offerMaterial} />}
 
       {busy && (
         <div role="status" className="grid gap-4">
