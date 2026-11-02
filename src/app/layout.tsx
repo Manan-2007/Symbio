@@ -1,15 +1,25 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
+import { AppProvider } from "@/components/app-provider";
+import { ToastProvider } from "@/components/ui/toast";
+
+const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-cormorant" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
-  title: "Symbio — turn surplus into resources",
-  description: "Demo B2B matchmaker for industrial by-products, using fictional businesses and browser-local data.",
+  title: { default: "SYMBIO — One Industry's Waste. Another Industry's Wealth.", template: "%s · SYMBIO" },
+  description: "B2B industrial by-product matchmaking for a circular economy. Demo data, browser-local.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full">{children}</body>
+    <html lang="en" className={`${cormorant.variable} ${manrope.variable} h-full`}>
+      <body className="min-h-full">
+        <ToastProvider>
+          <AppProvider>{children}</AppProvider>
+        </ToastProvider>
+      </body>
     </html>
   );
 }

@@ -1,81 +1,141 @@
 @import "tailwindcss";
 
-/* Theme from plan.md §9. Light only for this prototype. */
+/*
+ * SYMBIO design tokens: warm ivory canvas, deep forest primary, sage surfaces,
+ * charcoal type, a restrained gold accent. Serif display + sans body.
+ * Radii: pills for buttons, 12px for inputs, 20px for cards, 28px for hero panels.
+ */
 @theme {
-  --color-canvas: #f7f8f5;
-  --color-primary: #166534;
-  --color-primary-hover: #14532d;
-  --color-ink: #17251c;
-  --color-muted: #526158;
-  --color-line: #d7ded8;
-  --color-notice: #fef3c7;
-  --color-notice-text: #92400e;
-  --color-error: #b91c1c;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-ivory: #f6f4ec;
+  --color-cream: #eeeadc;
+  --color-forest-950: #0f261b;
+  --color-forest-900: #163a29;
+  --color-forest: #1e4d36;
+  --color-emerald: #2f7a52;
+  --color-leaf: #57a773;
+  --color-sage: #c3dfc9;
+  --color-sage-50: #e9f2ea;
+  --color-mist: #f1f4ee;
+  --color-ink: #1f2620;
+  --color-muted: #5d675f;
+  --color-line: #e3dfd1;
+  --color-line-strong: #cfcab8;
+  --color-gold: #a8834a;
+  --color-gold-50: #f6efe1;
+  --color-error: #a8322a;
+  --color-error-50: #fbeeec;
+  --color-notice: #f7edd3;
+  --color-notice-text: #6f5212;
+
+  /* Legacy aliases used by the original prototype at /prototype. */
+  --color-canvas: #f6f4ec;
+  --color-primary: #1e4d36;
+  --color-primary-hover: #163a29;
+
+  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 1.25rem;
+  --radius-panel: 1.75rem;
+
+  --shadow-soft: 0 1px 2px rgb(22 58 41 / 0.04), 0 10px 30px -14px rgb(22 58 41 / 0.16);
+  --shadow-lift: 0 2px 4px rgb(22 58 41 / 0.05), 0 22px 44px -18px rgb(22 58 41 / 0.28);
+
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-spin-slow: spin 40s linear infinite;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes orbit-flow {
+  to { stroke-dashoffset: -48; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 html {
   color-scheme: light;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--color-canvas);
+  background: var(--color-ivory);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-sage);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 @utility focus-ring {
   &:focus-visible {
-    outline: 3px solid var(--color-primary);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-emerald);
+    outline-offset: 3px;
   }
 }
 
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-emerald);
+    outline-offset: 3px;
+  }
+  h1, h2, h3 { text-wrap: balance; }
+}
+
 @layer components {
-  .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0; }
-  .field input, .field select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--color-line); border-radius: 8px; background: white; padding: 8px 12px; font: inherit; font-weight: 400; }
-  input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
-  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-  .btn:not(:disabled) { cursor: pointer; }
-  .card {
-    background: #ffffff;
-    border: 1px solid var(--color-line);
+  /* Form controls shared by every page. */
+  .input {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    border: 1px solid var(--color-line-strong);
     border-radius: 12px;
-    padding: 20px;
+    background: #fff;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: 15px;
+    color: var(--color-ink);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  .input:hover { border-color: var(--color-muted); }
+  .input:focus-visible { outline: none; border-color: var(--color-emerald); box-shadow: 0 0 0 3px rgb(47 122 82 / 0.18); }
+  .input[aria-invalid="true"] { border-color: var(--color-error); }
+  textarea.input { min-height: 104px; resize: vertical; }
+  .label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--color-ink); }
+  .hint { margin-top: 6px; font-size: 12.5px; color: var(--color-muted); }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-emerald);
   }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: 0 16px;
-    border-radius: 8px;
-    font-weight: 600;
-    border: 1px solid transparent;
-  }
-  .btn:focus-visible {
-    outline: 3px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-  .btn-primary {
-    background: var(--color-primary);
-    color: #ffffff;
-  }
-  .btn-primary:hover {
-    background: var(--color-primary-hover);
-  }
-  .btn-secondary {
-    background: #ffffff;
-    color: var(--color-ink);
-    border-color: var(--color-line);
-  }
-  .btn-secondary:hover {
-    border-color: var(--color-muted);
-  }
-  .btn-danger {
-    background: var(--color-error);
-    color: #ffffff;
-  }
+  /* Original prototype classes (/prototype). */
+  .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0; }
+  .field input, .field select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--color-line-strong); border-radius: 10px; background: white; padding: 8px 12px; font: inherit; font-weight: 400; }
+  .card { background: #fff; border: 1px solid var(--color-line); border-radius: 16px; padding: 20px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 999px; font-weight: 600; border: 1px solid transparent; }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn:not(:disabled) { cursor: pointer; }
+  .btn-primary { background: var(--color-forest); color: #fff; }
+  .btn-primary:hover { background: var(--color-forest-900); }
+  .btn-secondary { background: #fff; color: var(--color-ink); border-color: var(--color-line-strong); }
+  .btn-secondary:hover { border-color: var(--color-muted); }
+  .btn-danger { background: var(--color-error); color: #fff; }
 }
