@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { integrations, isSupabaseConfigured } from "./integrations";
 
@@ -9,9 +9,7 @@ let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured()) return null;
-  client ??= createClient(integrations.supabase.url, integrations.supabase.publishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
+  client ??= createBrowserClient(integrations.supabase.url, integrations.supabase.publishableKey);
   return client;
 }
 
