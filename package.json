@@ -8,12 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "check:foundation": "tsc src/lib/*.ts --outDir .check-build --module commonjs --target es2022 --moduleResolution node --skipLibCheck && node scripts/check-foundation.mjs ./.check-build"
+    "check:foundation": "tsc src/lib/*.ts --outDir .check-build --module commonjs --target es2022 --moduleResolution node --skipLibCheck && node scripts/check-foundation.mjs ./.check-build",
+    "check:platform": "tsc src/services/*.ts --outDir .check-platform --module commonjs --target es2022 --lib es2022,dom --moduleResolution node --skipLibCheck --strict && node scripts/check-platform.mjs ./.check-platform"
   },
   "dependencies": {
+    "framer-motion": "^14.9.0",
+    "lucide-react": "^1.66.0",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
