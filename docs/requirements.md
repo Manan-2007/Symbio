@@ -4,7 +4,7 @@
 
 Delivered on local demo data: landing page, auth (login/register/forgot/profile setup), dashboard, marketplace + listing details, add listing (with photo), requirements, smart matching (weighted, gated, explained), match details, negotiations (offers, counters, accept/decline, dispatch, receipt, messaging), map (schematic, Maps-ready), carbon impact dashboard, company profiles, transaction history (CSV), AI classifier and assistant interfaces (endpoint-ready, honest fallbacks). Verified with `pnpm check:platform` (14 checks) plus browser walkthroughs at desktop and 375 px.
 
-Remaining for a production version: Supabase auth/DB/storage with RLS, real verification, Google Maps with a key (untested here), real AI endpoints, payments, notifications, and reviewed carbon factors.
+Remaining for a production version: server-side accounts and shared data (currently localStorage only), real verification, Google Maps with a key (untested here), real AI endpoints, payments, notifications, and reviewed carbon factors.
 
 ---
 
@@ -75,4 +75,4 @@ No real auth, shared database, payments, uploads, chat, negotiation, reservation
 
 Automated checks cover fixtures, numeric bounds, storage failure/reset, legacy state loading, matching gates/ranking, action ownership and duplicates, and carbon ledger bounds/totals. Browser verification and build results are recorded in `docs/verification.md`.
 
-Remaining: native Windows launcher smoke test (needs a Windows machine), optional Vercel deployment (needs the repository imported into a Vercel account; see `docs/deployment.md`), then a separately scoped shared-backend/authentication iteration (needs a Supabase project). Real carbon accounting requires reviewed factors and confirmed transfers.
+Remaining: native Windows launcher smoke test (needs a Windows machine), optional Vercel deployment (needs the repository imported into a Vercel account; see `docs/deployment.md`), then a separately scoped shared-backend/authentication iteration. Real carbon accounting requires reviewed factors and confirmed transfers.

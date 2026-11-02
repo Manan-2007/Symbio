@@ -15,4 +15,4 @@ Each visitor's browser starts from the seed data and keeps its own copy. An enqu
 
 ## Later (not in this prototype)
 
-Shared data, accounts and RLS-protected tables are the Supabase iteration in `plan.md` §14. When it starts, add the variables listed in `.env.example` in Vercel's project settings; never expose `SUPABASE_SECRET_KEY` or `GOOGLE_MAPS_SERVER_KEY` to browser code.
+All data and demo accounts are stored per browser in localStorage. Add `GEOAPIFY_API_KEY` and the `AZURE_OPENAI_*` variables in the host's settings; never expose them as `NEXT_PUBLIC_`.

@@ -21,7 +21,7 @@ src/services/ (pure TS, no React)
 ```
 
 - **State:** `AppProvider` holds `AppState` (`schemaVersion: 2`: session, accounts, companies, listings, requirements, deals, saved listings). Every action is a pure function in `services/actions.ts`; the provider supplies IDs/timestamps, validates against the latest state via a ref, and commits. Same hydration rules as the prototype: nothing is read during server render, saving starts only after a successful load, and corrupt or unsupported data is left untouched until the user resets.
-- **Persistence seam:** `storageService.ts` (load/save/clear `symbio-app-v2`) and `actions.ts` are where a Supabase adapter replaces local storage. `integrations.ts` already detects configuration; no SDK is installed.
+- **Persistence seam:** `storageService.ts` (load/save/clear `symbio-app-v2`) and `actions.ts` hold all persistence: data and demo credentials (salted PBKDF2 hashes, `services/password.ts`) live in localStorage only.
 - **Matching:** `matchingEngine.evaluate()` applies hard gates (material compatibility table, quality, contamination, moisture, radius, ownership), then scores `M×0.40 + Q×0.25 + D×0.25 + P×0.10` and returns reasons and cautions.
 - **Deals:** request → negotiating (counter-offers) → accepted → in_transit (seller) → completed (buyer); decline/cancel branches. Only `completed` deals count toward impact.
 - **Carbon:** reused kg × material-specific illustrative factor (`catalog.ts`). Never presented as certified.

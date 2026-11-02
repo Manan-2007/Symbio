@@ -2,7 +2,7 @@
 
 **One Industry's Waste. Another Industry's Wealth.**
 
-A B2B industrial by-product matchmaking platform: waste generators list surplus materials, waste consumers publish requirements, and a transparent matching engine connects them. It is a polished, fully working demo on local data, with clear seams for Supabase, Google Maps and AI services.
+A B2B industrial by-product matchmaking platform: waste generators list surplus materials, waste consumers publish requirements, and a transparent matching engine connects them. It is a polished, fully working demo on local data, with all data and demo accounts stored in the browser (localStorage) and live Azure OpenAI and Geoapify integrations.
 
 > All companies, listings, reviews, testimonials and impact figures are **fictional demo data**. Accounts are simulated and data lives in your browser.
 
@@ -54,7 +54,6 @@ pnpm check:foundation   # original 3-hour prototype (/prototype)
 |---|---|---|---|
 | Azure OpenAI (gpt-4o) | Symbio Assistant answers; photo classification; Upcycling & Barter estimator | Live | `src/server/azure-openai.ts`, `src/app/api/ai/*` |
 | Geoapify | Map tiles, driving routes and road distance, place search on the Map page | Live | `src/server/geoapify.ts`, `src/app/api/geo/*` |
-| Supabase | Contact form storage now; accounts and shared data next | Connected; **schema not yet applied** | `src/services/supabase.ts`, `supabase/schema.sql` |
 
 All secret keys stay server-side in route handlers. **Integrations** in the app sidebar shows live status (`GET /api/status`, which never reveals key values).
 
@@ -62,19 +61,18 @@ All secret keys stay server-side in route handlers. **Integrations** in the app 
 
 | Real | Prototype (hardcoded, clearly labelled) |
 |---|---|
-| Matching engine, validation, negotiation workflow, carbon arithmetic, charts, filters, CSV export, photo resize, AI assistant and classifier, maps, routes, geocoding | **Payments:** escrow checkout (UPI / net banking / card / NEFT), held on payment, released on receipt, refunded on cancel; no money moves, no payment details collected. **Notifications:** in-app bell derived from activity. **Verification:** GSTIN format check plus document name, then "Simulate approval". **Accounts and marketplace data:** browser-local demo auth (passwords never stored) |
+| Matching engine, validation, negotiation workflow, carbon arithmetic, charts, filters, CSV export, photo resize, AI assistant and classifier, maps, routes, geocoding | **Payments:** escrow checkout (UPI / net banking / card / NEFT), held on payment, released on receipt, refunded on cancel; no money moves, no payment details collected. **Notifications:** in-app bell derived from activity. **Verification:** GSTIN format check plus document name, then "Simulate approval". **Accounts and marketplace data:** stored only in this browser's localStorage; passwords are kept as salted PBKDF2 hashes. Demo companies use password `demo1234` |
 
 ## Setup checklist (what's still missing and how to fix it)
 
-1. **Create the Supabase tables (required for the contact form).** Supabase Dashboard → SQL Editor → paste [`supabase/schema.sql`](supabase/schema.sql) → Run. Then reload **Integrations**: Supabase should show *Working*.
-2. **Rotate the shared keys.** The Azure OpenAI and Geoapify keys were shared in chat; regenerate them in the Azure portal / Geoapify dashboard and update `.env.local`.
-3. **Restrict keys.** The Geoapify key is used only by SYMBIO's server, so do **not** add an HTTP-referrer (origin) restriction: server requests send no referrer and would be blocked. Once deployed, add your server's outbound IP in Geoapify → API key settings, and set a daily request quota. For Azure OpenAI, use the resource's networking rules to allow only your server once deployed.
-4. **Deploying (e.g. Vercel):** add every variable from `.env.local` in the project settings. The app needs a Node server (API routes), not a static export.
-5. **Move marketplace data to Supabase (next iteration).** Replace `src/services/storageService.ts` with Supabase reads/writes, switch demo login to Supabase Auth (`getSupabase().auth.signUp/signInWithPassword`), create a company + membership on signup, and upload listing photos to the `listing-images` bucket. The schema and RLS policies are ready.
-6. **Real payments.** Use a payment gateway with escrow/route support on the server; record results in the `payments` table from a webhook using `SUPABASE_SECRET_KEY` (server-only).
-7. **Real verification.** Store documents in a private bucket, review them in an admin tool, and update `verification_status` with the service role (the schema trigger blocks self-verification).
-8. **Email/SMS notifications.** Write rows to `notifications` and send via a provider from a server function.
-9. **Rate limiting.** Add per-IP limits to `/api/ai/*` before public launch to control Azure costs.
+1. **Rotate the shared keys.** The Azure OpenAI and Geoapify keys were shared in chat; regenerate them in the Azure portal / Geoapify dashboard and update `.env.local`.
+2. **Restrict keys.** The Geoapify key is used only by SYMBIO's server, so do **not** add an HTTP-referrer (origin) restriction: server requests send no referrer and would be blocked. Once deployed, add your server's outbound IP in Geoapify → API key settings, and set a daily request quota. For Azure OpenAI, use the resource's networking rules to allow only your server once deployed.
+3. **Deploying (e.g. Vercel):** add every variable from `.env.local` in the project settings. The app needs a Node server (API routes), not a static export.
+4. **Shared accounts and data (if ever needed).** Everything is per-browser by design. Multi-device use would need a server database and real authentication replacing `src/services/storageService.ts`.
+5. **Real payments.** Use a payment gateway with escrow support from server routes; never collect card details in the browser.
+6. **Real verification.** Review GST documents server-side in an admin tool.
+7. **Email/SMS notifications.** Send via a provider from a server route.
+8. **Rate limiting.** Add per-IP limits to `/api/ai/*` before public launch to control Azure costs.
 
 ## Limitations
 
