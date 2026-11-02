@@ -220,6 +220,27 @@ assert.equal(series.length, 6);
 assert.equal(series[0].month, "Jun");
 n++;
 
+// Gale-Shapley: textbook case with a known proposer-optimal stable result, plus displacement.
+{
+  const gs = load("stableMatching");
+  const P = (id, prefs) => ({ id, label: id, ownerName: id, itemType: "sawdust", quantity: 1, baseYieldValue: 1, preferences: prefs });
+  const R = (id, prefs) => ({ id, ownerName: id, itemOffered: "", requiredItem: "sawdust", requiredQty: 1, estimatedYield: 1, trustScore: 70, preferences: prefs });
+  const props = [P("a", ["x", "y", "z"]), P("b", ["x", "z", "y"]), P("c", ["y", "x", "z"])];
+  const revs = [R("x", ["b", "a", "c"]), R("y", ["a", "c", "b"]), R("z", ["c", "a", "b"])];
+  const r = gs.galeShapley(props, revs);
+  assert.deepEqual(r.matches, { a: "y", b: "x", c: "z" }, "a displaced from x by b, then a takes y and c moves to z");
+  assert.ok(gs.isStable(props, revs, r.matches));
+  assert.equal(gs.isStable(props, revs, { a: "x", b: "y", c: "z" }), false, "detects a blocking pair");
+  const unacceptable = gs.galeShapley([P("a", ["x"])], [R("x", [])]);
+  assert.equal(unacceptable.matches.a, null, "reviewers never accept proposers they did not rank");
+  const market = gs.buildBarterMarket(seed);
+  assert.ok(market.stable && market.pairs.length >= 3, "demo market produces a stable set of pairs");
+  const ids = market.pairs.map((p) => p.reviewer.id);
+  assert.equal(new Set(ids).size, ids.length, "each counterparty matched at most once");
+  for (const p of market.pairs) assert.ok(p.netYieldKg > 0 && p.netYieldKg <= p.usableKg);
+  n++;
+}
+
 // Credentials: demo hash matches the demo password; wrong passwords fail; stored hash never equals the password.
 const greenAcct = seed.accounts.find((a) => a.companyId === "co-green-furniture");
 assert.equal(await pw.verifyPassword(DEMO_PASSWORD, greenAcct), true);
