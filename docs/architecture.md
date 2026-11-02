@@ -2,14 +2,14 @@
 
 ## Platform (current app)
 
-Next.js 16 App Router, TypeScript strict, Tailwind 4, Framer Motion, Recharts, Lucide. The brief asked for React + Vite + JS; the existing, tested Next.js + TS codebase was kept instead (App Router replaces React Router).
+Next.js 16.4.3 App Router, React 19.3, TypeScript strict, Tailwind 4, Framer Motion, Recharts and Lucide. The current platform uses browser-local state with server-only Azure OpenAI and Geoapify integration adapters. See the [README](../README.md#architecture) for the system diagram.
 
 ```text
 src/app/(marketing)/      /, /about, /contact             Navbar + Footer + Assistant
 src/app/(auth)/           /login, /register, /forgot-password
 src/app/(app)/            AppShell (sidebar) + Assistant
   dashboard  marketplace  marketplace/[id]  listings/new  requirements  matches  matches/[id]
-  negotiations  map  impact  transactions  companies/[id]  classifier  onboarding
+  negotiations  barter  map  impact  transactions  companies/[id]  classifier  onboarding  integrations
 src/app/prototype/        original 3-hour prototype (unchanged logic, own storage key)
 
 src/components/app-provider.tsx   single source of truth: hydration, persistence, actions
@@ -17,16 +17,20 @@ src/components/ui/                Button, Card/Badge/Notice/EmptyState, fields, 
 src/components/layout/            Navbar, Footer, AppShell, RequireAuth
 src/services/ (pure TS, no React)
   types.ts  catalog.ts  demoData.ts  geo.ts  matchingEngine.ts  carbonCalculator.ts
-  validation.ts  actions.ts  analytics.ts  storageService.ts  integrations.ts  ai.ts
+  validation.ts  actions.ts  analytics.ts  storageService.ts  password.ts  notifications.ts  ai.ts  barter.ts
+src/server/              azure-openai.ts  geoapify.ts
+src/app/api/             ai/{assistant,classify,barter}  geo/{geocode,route,staticmap}  status
 ```
 
 - **State:** `AppProvider` holds `AppState` (`schemaVersion: 2`: session, accounts, companies, listings, requirements, deals, saved listings). Every action is a pure function in `services/actions.ts`; the provider supplies IDs/timestamps, validates against the latest state via a ref, and commits. Same hydration rules as the prototype: nothing is read during server render, saving starts only after a successful load, and corrupt or unsupported data is left untouched until the user resets.
 - **Persistence seam:** `storageService.ts` (load/save/clear `symbio-app-v2`) and `actions.ts` hold all persistence: data and demo credentials (salted PBKDF2 hashes, `services/password.ts`) live in localStorage only.
 - **Matching:** `matchingEngine.evaluate()` applies hard gates (material compatibility table, quality, contamination, moisture, radius, ownership), then scores `M×0.40 + Q×0.25 + D×0.25 + P×0.10` and returns reasons and cautions.
-- **Deals:** request → negotiating (counter-offers) → accepted → in_transit (seller) → completed (buyer); decline/cancel branches. Only `completed` deals count toward impact.
+- **Deals:** requested → negotiating (counter-offers) → accepted → simulated buyer payment → in_transit (seller) → completed (buyer); decline/cancel branches. Dispatch requires a held escrow payment. Receipt releases it; cancelling an accepted paid exchange refunds it. Payment state is nested on the deal, not a separate deal status. Only `completed` deals count toward impact. Listing quantities are not decremented or globally reserved.
 - **Carbon:** reused kg × material-specific illustrative factor (`catalog.ts`). Never presented as certified.
-- **Maps:** `map-view.tsx` renders a schematic SVG with labelled mock distances; it loads Google Maps only when `NEXT_PUBLIC_ENABLE_MAPS=true` and a browser key exist.
-- **AI:** `ai.ts` calls configured endpoints only; otherwise the classifier reports "not connected" and the assistant answers from the catalogue, clearly labelled.
+- **Maps:** `map-view.tsx` uses server-proxied Geoapify static maps and driving routes when configured, with a schematic SVG fallback. Place search is proxied through `/api/geo/geocode`. Matching and radius filtering continue to use Haversine distances between approximate city centres, separately from road distances.
+- **AI:** `ai.ts` calls the app’s `/api/ai/*` routes. The server adapter calls Azure OpenAI for the assistant, vision classifier and upcycling/barter estimator. The classifier validates returned material IDs; barter output is parsed into a typed estimate, with client-side yield scaling and value-balance arithmetic. Missing credentials produce explicit unavailable states; the assistant falls back to labelled catalogue answers.
+- **Integration status:** `/api/status` reports the presence of required environment variables, not provider health or credential validity. Secret keys stay in server modules.
+- **Auxiliary demo state:** the contact form saves to `symbio-contact-v1`; password recovery does not send email; verification stores a GSTIN and document filename with a simulated review. Notifications are derived from local activity, without a delivery backend.
 - **Prerendering:** pages are static; detail routes read params on the client inside Suspense. Time-dependent charts use `useClientNow()` so nothing time-based runs during prerender.
 
 ---
@@ -81,7 +85,10 @@ Reset removes only `symbio-demo-v1` (never `localStorage.clear()`) and restores 
 
 `start.sh` and `start.bat` resolve the project directory and invoke `scripts/start.mjs`. The shared Node launcher checks the Node version, installs missing dependencies through pnpm, reuses this project's live Next dev lock/URL when available, otherwise checks the requested port and starts Next bound to loopback. An HTTP readiness check precedes browser opening. Startup errors and timeout are reported; Ctrl+C cleans up the owned process tree. The launcher never stops a server it reused. `--no-open` supports terminal-only use; `--port` controls a new server.
 
-## Deferred integrations
+## Original prototype integration decisions
+
+This section records the original prototype scope. The current platform uses Azure OpenAI and Geoapify as described above.
+
 
 Supabase and Google Maps are **not** initialised or called. A shared database needs authentication, ownership rules and RLS testing (plan §14), which does not fit the timebox; putting privileged keys in the client to fake it is not acceptable. Later, `storage.ts` (load/save) and `demo-actions.ts` (writes) are the seams to replace with user-scoped Supabase reads/writes, and `CITY_COORDINATES` is the seam for geocoding.
 
