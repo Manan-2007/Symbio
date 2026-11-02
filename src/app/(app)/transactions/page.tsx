@@ -9,12 +9,18 @@ import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { StatusBadge, STATUS_LABELS } from "@/components/deal-status";
+import { PAYMENT_LABELS } from "@/components/payment-modal";
 import { materialName } from "@/services/catalog";
 import { agreedTerms } from "@/services/carbonCalculator";
-import type { DealStatus } from "@/services/types";
+import type { Deal, DealStatus } from "@/services/types";
 import { cx, fmtDate, fmtInr, fmtKg, shortId } from "@/utils/format";
 
 const TX_STATUSES: DealStatus[] = ["accepted", "in_transit", "completed", "cancelled", "rejected"];
+
+function paymentLabel(p: Deal["payment"]): string {
+  if (!p) return "Unpaid";
+  return `${p.status === "held_in_escrow" ? "In escrow" : p.status === "released" ? "Released" : "Refunded"} · ${PAYMENT_LABELS[p.method]}`;
+}
 
 function Transactions() {
   const { state, me } = useApp();
@@ -44,8 +50,8 @@ function Transactions() {
   const totalValue = rows.filter((r) => r.deal.status === "completed").reduce((s, r) => s + r.amount, 0);
 
   function exportCsv() {
-    const header = ["Transaction ID", "Buyer", "Seller", "Material", "Quantity (kg)", "Amount (INR)", "Date", "Status"];
-    const lines = rows.map((r) => [r.id, r.buyer, r.seller, r.material, r.kg, r.amount.toFixed(2), r.date.slice(0, 10), STATUS_LABELS[r.deal.status]]
+    const header = ["Transaction ID", "Buyer", "Seller", "Material", "Quantity (kg)", "Amount (INR)", "Date", "Status", "Payment", "Payment ref"];
+    const lines = rows.map((r) => [r.id, r.buyer, r.seller, r.material, r.kg, r.amount.toFixed(2), r.date.slice(0, 10), STATUS_LABELS[r.deal.status], paymentLabel(r.deal.payment), r.deal.payment?.reference ?? ""]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
     const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -59,7 +65,7 @@ function Transactions() {
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Transaction history" title="Agreed exchanges" description="Every exchange from acceptance onward. Amounts are agreed terms between demo companies; no payments are processed."
+      <PageHeader eyebrow="Transaction history" title="Agreed exchanges" description="Every exchange from acceptance onward, with escrow payment status. Payments are simulated in this prototype."
         actions={<Button variant="secondary" icon={<Download className="size-4" />} onClick={exportCsv} disabled={rows.length === 0}>Export CSV</Button>} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
@@ -80,9 +86,9 @@ function Transactions() {
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-[13.5px]">
+            <table className="w-full min-w-[960px] text-left text-[13.5px]">
               <thead className="bg-mist text-[12px] text-muted">
-                <tr>{["Transaction ID", "Buyer", "Seller", "Material", "Quantity", "Amount", "Date", "Status"].map((h) => <th key={h} scope="col" className="px-5 py-3 font-semibold">{h}</th>)}</tr>
+                <tr>{["Transaction ID", "Buyer", "Seller", "Material", "Quantity", "Amount", "Date", "Status", "Payment"].map((h) => <th key={h} scope="col" className="px-5 py-3 font-semibold">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {rows.map((r) => (
@@ -95,6 +101,7 @@ function Transactions() {
                     <td className="px-5 py-3.5 tabular-nums font-semibold">{fmtInr(r.amount)}</td>
                     <td className="px-5 py-3.5 text-muted">{fmtDate(r.date)}</td>
                     <td className="px-5 py-3.5"><StatusBadge status={r.deal.status} /></td>
+                    <td className="px-5 py-3.5 text-[12.5px] text-muted" title={r.deal.payment?.reference}>{paymentLabel(r.deal.payment)}</td>
                   </tr>
                 ))}
               </tbody>

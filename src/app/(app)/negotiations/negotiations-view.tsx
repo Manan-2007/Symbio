@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowLeft, Check, Handshake, MessageSquare, Repeat2, Send, Truck, X } from "lucide-react";
+import { ArrowLeft, Check, Handshake, IndianRupee, Lock, MessageSquare, Repeat2, Send, Truck, X } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { RequireAuth } from "@/components/layout/require-auth";
 import { useToast } from "@/components/ui/toast";
@@ -13,6 +13,8 @@ import { Card, EmptyState, Notice, PageHeader } from "@/components/ui/primitives
 import { TextField } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { StatusBadge, StatusTracker, STATUS_LABELS } from "@/components/deal-status";
+import { PaymentModal, PAYMENT_LABELS } from "@/components/payment-modal";
+import { Badge } from "@/components/ui/primitives";
 import { materialName } from "@/services/catalog";
 import { agreedTerms } from "@/services/carbonCalculator";
 import { parseNumber } from "@/services/validation";
@@ -26,6 +28,7 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
   const { state, me } = app;
   const { toast } = useToast();
   const [counterOpen, setCounterOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,8 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
     ...deal.offers.map((o, i) => ({ kind: "offer" as const, at: o.createdAt, id: o.id, by: o.byCompanyId, offer: o, first: i === 0 })),
     ...deal.messages.map((m) => ({ kind: "message" as const, at: m.createdAt, id: m.id, by: m.companyId, text: m.text })),
     ...deal.history.filter((h) => h.status !== "requested" && h.status !== "negotiating").map((h, i) => ({ kind: "status" as const, at: h.at, id: `${deal.id}-h${i}`, by: h.byCompanyId, status: h.status })),
+    ...(deal.payment ? [{ kind: "payment" as const, at: deal.payment.paidAt, id: `${deal.id}-pay`, by: deal.buyerId, text: `${fmtInr(deal.payment.amountInr)} paid via ${PAYMENT_LABELS[deal.payment.method]} · held in escrow · ref ${deal.payment.reference}` }] : []),
+    ...(deal.payment?.settledAt ? [{ kind: "payment" as const, at: deal.payment.settledAt, id: `${deal.id}-settle`, by: deal.buyerId, text: deal.payment.status === "released" ? `Escrow released to the seller` : `Payment refunded to the buyer` }] : []),
   ].sort((a, b) => a.at.localeCompare(b.at)), [deal]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: "nearest" }); }, [timeline.length]);
@@ -59,7 +64,7 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
       accept: () => done(app.acceptDeal(deal.id), "Terms accepted", "The seller can now dispatch the material."),
       reject: () => done(app.rejectDeal(deal.id), "Request declined"),
       cancel: () => done(app.cancelDeal(deal.id), "Exchange cancelled"),
-      receive: () => done(app.markReceived(deal.id), "Receipt confirmed", "This exchange now counts toward your impact."),
+      receive: () => done(app.markReceived(deal.id), "Receipt confirmed", "Escrow released to the seller. This exchange now counts toward your impact."),
     };
     map[pending.kind]();
     setPending(null);
@@ -93,7 +98,10 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
             <h2 className="font-display text-[28px] leading-tight text-forest-950">{materialName(listing.materialId)} with <Link href={`/companies/${other?.id}`} className="hover:underline">{other?.name}</Link></h2>
             <p className="text-[13px] text-muted">Current terms: {fmtKg(terms.quantityKg)} at {fmtPricePerKg(terms.pricePerKg)} = <strong className="text-ink">{fmtInr(terms.quantityKg * terms.pricePerKg)}</strong></p>
           </div>
-          <StatusBadge status={deal.status} />
+          <div className="flex flex-wrap gap-1.5">
+            <StatusBadge status={deal.status} />
+            {deal.payment && <Badge tone={deal.payment.status === "held_in_escrow" ? "gold" : deal.payment.status === "released" ? "green" : "neutral"} icon={<Lock className="size-3" />}>{deal.payment.status === "held_in_escrow" ? "Paid · in escrow" : deal.payment.status === "released" ? "Paid · released" : "Refunded"}</Badge>}
+          </div>
         </div>
         <div className="mt-5"><StatusTracker status={deal.status} reached={deal.history.map((h) => h.status)} /></div>
       </div>
@@ -101,6 +109,9 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
       <div className="flex-1 space-y-3 overflow-y-auto bg-mist/60 p-5 sm:p-6" aria-live="polite">
         {timeline.map((item) => {
           const mine = item.by === company.id;
+          if (item.kind === "payment") {
+            return <p key={item.id} className="flex items-center justify-center gap-1.5 text-center text-[12px] font-medium text-forest"><IndianRupee className="size-3.5" aria-hidden />{item.text} · {fmtDateTime(item.at)}</p>;
+          }
           if (item.kind === "status") {
             return <p key={item.id} className="text-center text-[12px] text-muted">{name(item.by)} marked the exchange <strong>{STATUS_LABELS[item.status].toLowerCase()}</strong> · {fmtDateTime(item.at)}</p>;
           }
@@ -145,8 +156,11 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
         )}
         {deal.status === "accepted" && (
           <div className="flex flex-wrap items-center gap-2">
-            {isBuyer ? <p className="text-[13px] text-muted">Agreed. Waiting for {other?.name} to dispatch.</p> : <Button icon={<Truck className="size-4" />} onClick={() => done(app.markDispatched(deal.id), "Marked as dispatched", "The buyer will confirm receipt.")}>Mark as dispatched</Button>}
-            <Button size="sm" variant="ghost" onClick={() => setPending({ kind: "cancel", title: "Cancel this exchange?", body: "Agreed terms will be voided.", label: "Cancel exchange", danger: true })}>Cancel exchange</Button>
+            {isBuyer && !deal.payment && <Button icon={<Lock className="size-4" />} onClick={() => setPayOpen(true)}>Pay {fmtInr(terms.quantityKg * terms.pricePerKg)} into escrow</Button>}
+            {isBuyer && deal.payment && <p className="text-[13px] text-muted">Paid into escrow. Waiting for {other?.name} to dispatch.</p>}
+            {!isBuyer && !deal.payment && <p className="text-[13px] text-muted">Agreed. Waiting for {other?.name} to pay into escrow before you dispatch.</p>}
+            {!isBuyer && deal.payment && <Button icon={<Truck className="size-4" />} onClick={() => done(app.markDispatched(deal.id), "Marked as dispatched", "The buyer will confirm receipt.")}>Mark as dispatched</Button>}
+            <Button size="sm" variant="ghost" onClick={() => setPending({ kind: "cancel", title: "Cancel this exchange?", body: deal.payment ? "Agreed terms are voided and the escrow payment is refunded to the buyer (simulated)." : "Agreed terms will be voided.", label: "Cancel exchange", danger: true })}>Cancel exchange</Button>
           </div>
         )}
         {deal.status === "in_transit" && (
@@ -177,6 +191,7 @@ function Thread({ deal, onBack }: { deal: Deal; onBack: () => void }) {
         </form>
       </div>
 
+      {isBuyer && deal.status === "accepted" && !deal.payment && <PaymentModal deal={deal} open={payOpen} onClose={() => setPayOpen(false)} />}
       <ConfirmDialog open={pending !== null} onCancel={() => setPending(null)} onConfirm={confirmPending} title={pending?.title ?? ""} body={pending?.body ?? ""} confirmLabel={pending?.label} danger={pending?.danger} />
     </Card>
   );
@@ -230,7 +245,7 @@ function Negotiations() {
               const other = state.companies.find((c) => c.id === (isBuyer ? d.sellerId : d.buyerId));
               const last = d.offers[d.offers.length - 1];
               const needsMe = (d.status === "requested" || d.status === "negotiating") && last.byCompanyId !== company.id
-                || (d.status === "accepted" && !isBuyer) || (d.status === "in_transit" && isBuyer);
+                || (d.status === "accepted" && (isBuyer ? !d.payment : Boolean(d.payment))) || (d.status === "in_transit" && isBuyer);
               return (
                 <li key={d.id}>
                   <button type="button" onClick={() => select(d.id)} aria-current={selected?.id === d.id} className={cx("focus-ring w-full rounded-2xl border p-4 text-left transition-colors", selected?.id === d.id ? "border-forest bg-white shadow-soft" : "border-line bg-white/70 hover:border-forest/40")}>
