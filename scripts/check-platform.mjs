@@ -14,6 +14,10 @@ const actions = load("actions");
 const { validateAppState } = load("validation");
 const { answerFromCatalogue, classifyMaterialImage } = load("ai");
 const analytics = load("analytics");
+const pw = load("password");
+const { DEMO_PASSWORD } = load("demoData");
+const creds = await pw.hashPassword("long-enough");
+const H = { salt: creds.salt, passwordHash: creds.hash };
 
 let n = 0;
 let counter = 0;
@@ -79,16 +83,19 @@ check("carbon counts only completed exchanges with material factors", () => {
 });
 
 check("demo auth, registration validation, no password storage", () => {
-  assert.equal(actions.loginWithEmail(seed, "nobody@x.com").ok, false);
-  const li = actions.loginWithEmail(seed, "OPS@greenfurniture.demo");
-  assert.ok(li.ok && li.value.session.companyId === "co-green-furniture");
-  const bad = actions.register(seed, { companyName: "Acme", email: "acme@x.com", password: "short", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx());
+  assert.equal(actions.findAccount(seed, "nobody@x.com"), undefined);
+  assert.equal(actions.findAccount(seed, "OPS@greenfurniture.demo").companyId, "co-green-furniture");
+  const bad = actions.register(seed, { companyName: "Acme", email: "acme@x.com", password: "short", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"], ...H }, ctx());
   assert.equal(bad.ok, false);
-  const ok = actions.register(seed, { companyName: "Acme", email: "acme@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator", "consumer"] }, ctx());
+  const ok = actions.register(seed, { companyName: "Acme", email: "acme@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator", "consumer"], ...H }, ctx());
   assert.ok(ok.ok);
   assert.ok(!JSON.stringify(ok.value).includes("long-enough"), "password must not be stored");
-  assert.equal(actions.register(ok.value, { companyName: "Acme 2", email: "ACME@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx()).ok, false, "duplicate email");
+  assert.equal(actions.register(ok.value, { companyName: "Acme 2", email: "ACME@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"], ...H }, ctx()).ok, false, "duplicate email");
   assert.ok(validateAppState(JSON.parse(JSON.stringify(ok.value))));
+});
+
+check("registration requires a valid hash", () => {
+  assert.equal(actions.register(seed, { companyName: "NoHash", email: "nh@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx()).ok, false);
 });
 
 check("listing and requirement creation validate and respect roles", () => {
@@ -147,7 +154,7 @@ check("deal lifecycle: request → counter → accept → dispatch → receive; 
 });
 
 check("verification and notifications", () => {
-  let s = actions.register(seed, { companyName: "Verify Co", email: "v@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"] }, ctx()).value;
+  let s = actions.register(seed, { companyName: "Verify Co", email: "v@x.com", password: "long-enough", industry: "Metal", cityId: "delhi", phone: "+91 98765 43210", roles: ["generator"], ...H }, ctx()).value;
   assert.equal(actions.submitVerification(s, { gstin: "BAD", documentName: "gst.pdf" }, ctx()).ok, false);
   assert.equal(actions.submitVerification(s, { gstin: "03ABCDE1234F1Z5", documentName: "" }, ctx()).ok, false);
   s = actions.submitVerification(s, { gstin: "03abcde1234f1z5", documentName: "gst.pdf" }, ctx()).value;
@@ -211,6 +218,14 @@ n++;
 const series = analytics.monthlySeries(carbon.impactRecords(seed), "2026-11-02T00:00:00.000Z");
 assert.equal(series.length, 6);
 assert.equal(series[0].month, "Jun");
+n++;
+
+// Credentials: demo hash matches the demo password; wrong passwords fail; stored hash never equals the password.
+const greenAcct = seed.accounts.find((a) => a.companyId === "co-green-furniture");
+assert.equal(await pw.verifyPassword(DEMO_PASSWORD, greenAcct), true);
+assert.equal(await pw.verifyPassword("wrong-pass", greenAcct), false);
+assert.equal(await pw.verifyPassword("long-enough", H), true);
+assert.notEqual(creds.hash, "long-enough");
 n++;
 
 console.log(`platform checks passed (${n})`);
