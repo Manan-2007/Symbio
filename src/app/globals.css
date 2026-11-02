@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* Theme from plan.md §9. Light only for this prototype. */
+@theme {
+  --color-canvas: #f7f8f5;
+  --color-primary: #166534;
+  --color-primary-hover: #14532d;
+  --color-ink: #17251c;
+  --color-muted: #526158;
+  --color-line: #d7ded8;
+  --color-notice: #fef3c7;
+  --color-notice-text: #92400e;
+  --color-error: #b91c1c;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0; }
+  .field input, .field select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--color-line); border-radius: 8px; background: white; padding: 8px 12px; font: inherit; font-weight: 400; }
+  input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn:not(:disabled) { cursor: pointer; }
+  .card {
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .btn:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .btn-primary {
+    background: var(--color-primary);
+    color: #ffffff;
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
+  .btn-secondary {
+    background: #ffffff;
+    color: var(--color-ink);
+    border-color: var(--color-line);
+  }
+  .btn-secondary:hover {
+    border-color: var(--color-muted);
+  }
+  .btn-danger {
+    background: var(--color-error);
+    color: #ffffff;
+  }
+}
