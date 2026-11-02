@@ -24,11 +24,6 @@ export default function IntegrationsPage() {
       name: "Geoapify", what: "Map tiles, place search, driving routes and road distances.",
       ok: status ? status.geoapify.ok : null, configured: status ? status.geoapify.configured : null, detail: status?.geoapify.detail ?? "Checking…",
     },
-    {
-      name: "Supabase", what: "Contact form storage now; accounts, shared marketplace data and photo storage next.",
-      ok: status ? status.supabase.ok : null, configured: status ? status.supabase.configured : null, detail: status?.supabase.detail ?? "Checking…",
-      next: status && status.supabase.configured && !status.supabase.ok ? "Open Supabase → SQL Editor, paste supabase/schema.sql from the repo, and run it once." : undefined,
-    },
   ];
 
   return (
@@ -56,7 +51,7 @@ export default function IntegrationsPage() {
           <li><strong className="text-ink">Payments:</strong> escrow checkout is simulated. No money moves and no payment details are collected.</li>
           <li><strong className="text-ink">Notifications:</strong> in-app only, derived from activity. Email/SMS delivery needs a backend worker.</li>
           <li><strong className="text-ink">Verification:</strong> GSTIN format is checked and only the document&apos;s file name is kept. Review is simulated.</li>
-          <li><strong className="text-ink">Marketplace data:</strong> stored in this browser until the Supabase adapter replaces local storage.</li>
+          <li><strong className="text-ink">Data and accounts:</strong> stored only in this browser&apos;s localStorage (key <code>symbio-app-v2</code>), including demo credentials.</li>
         </ul>
       </Card>
     </div>

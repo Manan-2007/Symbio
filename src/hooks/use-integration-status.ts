@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 type Check = { configured: boolean; ok: boolean; detail: string };
-export type IntegrationStatus = { supabase: Check & { tables: Record<string, boolean> }; geoapify: Check; azureOpenAI: Check };
+export type IntegrationStatus = { geoapify: Check; azureOpenAI: Check };
 
 let cache: Promise<IntegrationStatus | null> | null = null;
 
