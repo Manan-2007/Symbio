@@ -27,10 +27,10 @@ export function RequestModal({ open, onClose, listing, requirementId = null, def
   const seller = state.companies.find((c) => c.id === listing.companyId);
   const total = parseNumber(qty) * parseNumber(price);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const note = String(new FormData(e.currentTarget).get("note") ?? "");
-    const r = requestDeal({ listingId: listing.id, requirementId, quantityKg: parseNumber(qty), pricePerKg: parseNumber(price), note });
+    const r = await requestDeal({ listingId: listing.id, requirementId, quantityKg: parseNumber(qty), pricePerKg: parseNumber(price), note });
     if (!r.ok) return setError(r.error);
     toast("success", "Purchase request sent", `${seller?.name ?? "The seller"} can now accept, decline or counter.`);
     onClose();

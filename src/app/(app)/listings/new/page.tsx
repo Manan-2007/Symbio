@@ -61,10 +61,10 @@ function AddListingForm() {
     }
   }
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    const r = addListing({
+    const r = await addListing({
       materialId, title: data.get("title"), description: data.get("description"), quantity: parseNumber(quantity), unit,
       pricePerKg: parseNumber(price), cityId: data.get("cityId"), quality, moisturePct: parseNumber(data.get("moisture")),
       contamination: data.get("contamination"), availability: data.get("availability"), imageDataUrl: image,
