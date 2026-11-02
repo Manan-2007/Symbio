@@ -3,6 +3,7 @@ import {
 } from "./types";
 import type { AppState, Company, Deal, Listing, Requirement } from "./types";
 import { findCity, findMaterial } from "./catalog";
+import { isHashHex, isSaltHex } from "./password";
 
 export const LIMITS = {
   maxKg: 10_000_000,
@@ -125,8 +126,9 @@ export function validateAppState(raw: unknown): AppState | null {
   if (!deals.every((d) => validDeal(d, companyIds, listingMap, requirementIds))) return null;
   if (new Set(deals.map((d) => d.id)).size !== deals.length) return null;
 
-  const accounts = v.accounts as { email?: unknown; companyId?: unknown }[];
-  if (!accounts.every((a) => isEmail(a?.email) && companyIds.has(a.companyId as string))) return null;
+  const accounts = v.accounts as { email?: unknown; companyId?: unknown; salt?: unknown; passwordHash?: unknown }[];
+  if (!accounts.every((a) => isEmail(a?.email) && companyIds.has(a.companyId as string) && isSaltHex(a.salt) && isHashHex(a.passwordHash))) return null;
+  if (new Set(accounts.map((a) => (a.email as string).toLowerCase())).size !== accounts.length) return null;
 
   const session = v.session as { companyId?: unknown } | null;
   if (session !== null && !(typeof session === "object" && companyIds.has(session.companyId as string))) return null;

@@ -133,7 +133,8 @@ export type Deal = {
   updatedAt: string;
 };
 
-export type Account = { email: string; companyId: string };
+/** Demo credentials kept in localStorage: salted PBKDF2-SHA256 hash, never the plain password. */
+export type Account = { email: string; companyId: string; salt: string; passwordHash: string };
 
 export type AppState = {
   schemaVersion: 2;

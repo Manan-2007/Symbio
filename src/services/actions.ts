@@ -1,8 +1,9 @@
 import { AVAILABILITY, CONTAMINATION_LEVELS, DELIVERY, QUALITY_GRADES, ROLES, UNITS } from "./types";
 import { PAYMENT_METHODS } from "./types";
-import type { AppState, Company, Deal, DealStatus, Listing, Requirement, Result, Role } from "./types";
+import type { Account, AppState, Company, Deal, DealStatus, Listing, Requirement, Result, Role } from "./types";
 import { findCity, findMaterial } from "./catalog";
 import { GSTIN_PATTERN, LIMITS, decimals, isEmail, isPositiveKg, isPrice } from "./validation";
+import { isHashHex, isSaltHex } from "./password";
 
 // Pure state transitions. The provider supplies IDs and timestamps so these stay
 // deterministic and testable; it also persists the returned state.
@@ -17,13 +18,11 @@ function sessionCompany(state: AppState): Company | null {
   return state.session ? state.companies.find((c) => c.id === state.session!.companyId) ?? null : null;
 }
 
-// ---------- Demo authentication (no passwords are stored or verified) ----------
+// ---------- Demo authentication (credentials hashed in localStorage) ----------
 
-export function loginWithEmail(state: AppState, email: unknown): Result<AppState> {
+export function findAccount(state: AppState, email: unknown): Account | undefined {
   const normalized = text(email).toLowerCase();
-  const account = state.accounts.find((a) => a.email.toLowerCase() === normalized);
-  if (!account) return fail("No demo account uses that email. Register, or pick a demo company below.");
-  return { ok: true, value: { ...state, session: { companyId: account.companyId } } };
+  return state.accounts.find((a) => a.email.toLowerCase() === normalized);
 }
 
 export function loginAsCompany(state: AppState, companyId: string): Result<AppState> {
@@ -37,6 +36,8 @@ export function logout(state: AppState): AppState {
 
 export type RegisterInput = {
   companyName: unknown; email: unknown; password: unknown; industry: unknown; cityId: unknown; phone: unknown; roles: unknown;
+  /** Computed by the caller from `password` with hashPassword(); the plain password is never stored. */
+  salt?: unknown; passwordHash?: unknown;
 };
 
 export function register(state: AppState, input: RegisterInput, ctx: Ctx): Result<AppState> {
@@ -48,6 +49,7 @@ export function register(state: AppState, input: RegisterInput, ctx: Ctx): Resul
   if (!isEmail(email)) return fail("Enter a valid business email.");
   if (state.accounts.some((a) => a.email.toLowerCase() === email)) return fail("An account with this email already exists. Sign in instead.");
   if (typeof input.password !== "string" || input.password.length < 8) return fail("Password must be at least 8 characters.");
+  if (!isSaltHex(input.salt) || !isHashHex(input.passwordHash)) return fail("Could not secure the password. Try again.");
   if (industry.length < 2 || industry.length > LIMITS.maxName) return fail("Enter your industry.");
   if (!findCity(input.cityId as string)) return fail("Choose a location.");
   if (!/^[+\d][\d\s-]{6,19}$/.test(phone)) return fail("Enter a contact number.");
@@ -60,7 +62,7 @@ export function register(state: AppState, input: RegisterInput, ctx: Ctx): Resul
   };
   return {
     ok: true,
-    value: { ...state, companies: [...state.companies, company], accounts: [...state.accounts, { email, companyId: company.id }], session: { companyId: company.id } },
+    value: { ...state, companies: [...state.companies, company], accounts: [...state.accounts, { email, companyId: company.id, salt: input.salt, passwordHash: input.passwordHash }], session: { companyId: company.id } },
   };
 }
 

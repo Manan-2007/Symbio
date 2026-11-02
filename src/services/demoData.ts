@@ -132,7 +132,13 @@ export const SEED_DEALS: readonly Deal[] = [
   pastDeal("dl-h12", "ls-steel-punjab", "co-polymer-reborn", "co-punjab-steel", 900, 22, "2026-10-22T10:00:00.000Z", "in_transit"),
 ];
 
-export const DEMO_ACCOUNTS = SEED_COMPANIES.map((c) => ({ email: c.email, companyId: c.id }));
+/** Shared password for the fictional demo companies (shown on the login page). */
+export const DEMO_PASSWORD = "demo1234";
+// PBKDF2-SHA256, 100,000 iterations, of DEMO_PASSWORD with this salt (precomputed so seeding stays synchronous).
+export const DEMO_SALT = "73796d62696f2d64656d6f2d73616c74";
+export const DEMO_HASH = "4f0cf7a279f6ae34b8dd48292ac25b9849e1c0a01c67bd0f808948a585858409";
+
+export const DEMO_ACCOUNTS = SEED_COMPANIES.map((c) => ({ email: c.email, companyId: c.id, salt: DEMO_SALT, passwordHash: DEMO_HASH }));
 
 export function createSeedState(): AppState {
   const clone = <T,>(items: readonly T[]): T[] => items.map((item) => structuredClone(item));
