@@ -42,25 +42,43 @@ pnpm check:foundation   # original 3-hour prototype (/prototype)
 | Requirements | Material, quantity, budget, location + radius, minimum quality, contamination and moisture limits, delivery preference, notes |
 | Smart matching | `Score = M×0.40 + Q×0.25 + D×0.25 + P×0.10`; hard rejection of incompatible material, low quality, excess contamination/moisture, out-of-radius and self-matches; explanations; "filtered out" reasons; both directions |
 | Negotiation | Purchase requests, counter-offers on quantity and price, accept/decline/withdraw, seller dispatch, buyer receipt, messaging, status tracker |
-| Map | Nearby companies by radius and role, straight-line distances, route line; schematic map by default, Google Maps when configured |
+| Map | Geoapify map tiles, place search, nearby companies by radius and role, driving route with road distance and time |
 | Impact | Reused kg, CO₂e from material-specific illustrative factors, landfill diverted, exchanges, monthly charts, category share, company table, methodology |
 | Profiles & history | Company profile with verification, listings, reviews and trust score; transaction table with filters and CSV export |
-| AI-ready | Waste classifier (photo + catalogue guidance; calls an endpoint only when configured) and a floating Symbio Assistant (offline catalogue answers, or an endpoint) |
+| AI | Waste classifier (gpt-4o vision suggests the material, user confirms) and a floating Symbio Assistant (gpt-4o, grounded in the catalogue and current listings) |
 
-## Demo-only vs integrated
+## Integrations
 
-| Genuinely working | Demo / simulated | Integration-ready, not connected |
-|---|---|---|
-| Matching engine, validation, negotiation workflow, carbon arithmetic, charts, filters, CSV export, photo resize, persistence across refresh | Authentication (passwords length-checked, never stored; switching companies is not access control), verification badges, reviews, trust score, testimonials, carbon factors | Supabase auth/DB/storage (config detected in `src/services/integrations.ts`; local adapter active). Google Maps (loads with `NEXT_PUBLIC_ENABLE_MAPS=true` + key; untested without a key). AI classifier/assistant endpoints |
+| Service | Used for | Status | Where |
+|---|---|---|---|
+| Azure OpenAI (gpt-4o) | Symbio Assistant answers; photo classification in the Waste classifier | Live | `src/server/azure-openai.ts`, `src/app/api/ai/*` |
+| Geoapify | Map tiles, driving routes and road distance, place search on the Map page | Live | `src/server/geoapify.ts`, `src/app/api/geo/*` |
+| Supabase | Contact form storage now; accounts and shared data next | Connected; **schema not yet applied** | `src/services/supabase.ts`, `supabase/schema.sql` |
 
-## Environment variables
+All secret keys stay server-side in route handlers. **Integrations** in the app sidebar shows live status (`GET /api/status`, which never reveals key values).
 
-None are required. [`.env.example`](.env.example) lists the reserved names: Supabase URL and publishable key (plus the server-only secret key), the Maps flag and keys, and two AI endpoints. `NEXT_PUBLIC_*` values are visible in browser code, so never put secret or AI-provider keys in them.
+## Prototype vs real
+
+| Real | Prototype (hardcoded, clearly labelled) |
+|---|---|
+| Matching engine, validation, negotiation workflow, carbon arithmetic, charts, filters, CSV export, photo resize, AI assistant and classifier, maps, routes, geocoding | **Payments:** escrow checkout (UPI / net banking / card / NEFT), held on payment, released on receipt, refunded on cancel; no money moves, no payment details collected. **Notifications:** in-app bell derived from activity. **Verification:** GSTIN format check plus document name, then "Simulate approval". **Accounts and marketplace data:** browser-local demo auth (passwords never stored) |
+
+## Setup checklist (what's still missing and how to fix it)
+
+1. **Create the Supabase tables (required for the contact form).** Supabase Dashboard → SQL Editor → paste [`supabase/schema.sql`](supabase/schema.sql) → Run. Then reload **Integrations**: Supabase should show *Working*.
+2. **Rotate the shared keys.** The Azure OpenAI and Geoapify keys were shared in chat; regenerate them in the Azure portal / Geoapify dashboard and update `.env.local`.
+3. **Restrict keys.** Geoapify dashboard → API key → allowed origins/IPs; Azure → network rules if deployed.
+4. **Deploying (e.g. Vercel):** add every variable from `.env.local` in the project settings. The app needs a Node server (API routes), not a static export.
+5. **Move marketplace data to Supabase (next iteration).** Replace `src/services/storageService.ts` with Supabase reads/writes, switch demo login to Supabase Auth (`getSupabase().auth.signUp/signInWithPassword`), create a company + membership on signup, and upload listing photos to the `listing-images` bucket. The schema and RLS policies are ready.
+6. **Real payments.** Use a payment gateway with escrow/route support on the server; record results in the `payments` table from a webhook using `SUPABASE_SECRET_KEY` (server-only).
+7. **Real verification.** Store documents in a private bucket, review them in an admin tool, and update `verification_status` with the service role (the schema trigger blocks self-verification).
+8. **Email/SMS notifications.** Write rows to `notifications` and send via a provider from a server function.
+9. **Rate limiting.** Add per-IP limits to `/api/ai/*` before public launch to control Azure costs.
 
 ## Limitations
 
 - Data is per browser (`localStorage` key `symbio-app-v2`); nothing syncs across devices. **Reset demo data** in the sidebar clears only that key.
-- Distances are straight-line estimates between approximate city centres, not routes.
+- Matching distance uses straight-line estimates between approximate city centres; road distance is shown on maps via Geoapify.
 - Carbon numbers are illustrative estimates, not certified offsets or credits.
 - `start.bat` has not been run on native Windows.
 - The original three-hour prototype remains at `/prototype` (key `symbio-demo-v1`), with its [demo script](docs/demo-script.md).
